@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { CartItem } from "./RestaurantMenu";
+import { CartItem } from "@/context/CartContext";
 import { UserForm } from "./UserForm";
 
 type Props = {
@@ -12,10 +12,10 @@ export const Checkout: React.FC<Props> = ({ cart, onPay }) => {
     const [showForm, setShowForm] = useState(false);
 
     const subtotal = cart.reduce(
-        (acc, item) =>
-            acc +
-            item.price * item.quantity +
-            item.extras.reduce((sum, extra) => sum + extra.price, 0) * item.quantity,
+        (acc, item) => {
+            const price = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
+            return acc + (price * item.quantity);
+        },
         0
     );
 

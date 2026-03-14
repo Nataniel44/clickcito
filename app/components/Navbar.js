@@ -1,67 +1,84 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useAuth } from "@/app/context/AuthContext";
+import { auth } from "@/app/firebase/config";
+import { signOut } from "firebase/auth";
+import {
+  ShoppingBag, Menu, X, LogOut, LayoutDashboard,
+  ChevronDown, LogIn, Shield, Store, User, ShieldCheck, Package
+} from "lucide-react";
+
+// Configuración de roles
+const ROLE_CONFIG = {
+  admin_clickcito: {
+    badge: "Admin",
+    badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-600/20 dark:text-purple-400",
+    avatarColor: "bg-purple-600",
+    icon: ShieldCheck,
+    canAccessDashboard: true,
+    dropdownItems: [
+      { href: "/dashboard", label: "Panel Admin", icon: ShieldCheck },
+    ],
+    mobileButtonLabel: "Panel Admin",
+  },
+  "dueño_negocio": {
+    badge: "Dueño",
+    badgeColor: "bg-orange-100 text-orange-700 dark:bg-orange-600/20 dark:text-orange-400",
+    avatarColor: "bg-orange-600",
+    icon: Store,
+    canAccessDashboard: true,
+    dropdownItems: [
+      { href: "/dashboard", label: "Panel Control", icon: LayoutDashboard },
+    ],
+    mobileButtonLabel: "Ir al Panel",
+  },
+  cliente_final: {
+    badge: "Cliente",
+    badgeColor: "bg-blue-100 text-blue-700 dark:bg-blue-600/20 dark:text-blue-400",
+    avatarColor: "bg-blue-600",
+    icon: User,
+    canAccessDashboard: false,
+    dropdownItems: [
+      { href: "/mis-pedidos", label: "Mis Pedidos", icon: Package },
+    ],
+    mobileButtonLabel: "Mis Pedidos",
+    mobileButtonHref: "/mis-pedidos",
+  },
+};
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const { user, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const toggleMenu = () => setIsOpen((prev) => !prev);
 
-  // 🔐 Verificar sesión (seguro y sin romper en local)
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-        const res = await fetch(`${baseUrl}/api/me`, {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("No autenticado");
-        const data = await res.json();
-        setIsLoggedIn(data?.loggedIn === true);
-      } catch {
-        setIsLoggedIn(false);
-      }
-    };
-    checkAuth();
-  }, []);
-
-  // 🚪 Cerrar sesión
   const handleLogout = async () => {
     try {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-      await fetch(`${baseUrl}/api/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-      setIsLoggedIn(false);
-      window.location.href = "/login";
+      await signOut(auth);
+      window.location.href = "/";
     } catch (err) {
       console.error("Error al cerrar sesión:", err);
     }
   };
 
-  // 🎢 Cambiar estilo con scroll y controlar visibilidad del navbar
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 20);
 
-      setScrolled(currentScrollY > 10);
-
-      // Mostrar navbar cuando se desplaza hacia arriba, ocultar cuando baja
       if (currentScrollY < lastScrollY || currentScrollY < 10) {
         setShowNavbar(true);
       } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setShowNavbar(false);
       }
-
       setLastScrollY(currentScrollY);
     };
 
@@ -69,192 +86,261 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // Exponer el estado del navbar globalmente para otros componentes
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--navbar-visible',
-      showNavbar ? '1' : '0'
-    );
-  }, [showNavbar]);
+    const handleClickOutside = (e) => {
+      if (showDropdown && !e.target.closest('.user-dropdown')) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showDropdown]);
 
-  // 🚫 Bloquear scroll cuando el menú móvil está abierto
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "unset";
-  }, [isOpen]);
+  // Determinar rol y configuración
+  const userRole = user?.rol || null;
+  const roleConfig = userRole ? ROLE_CONFIG[userRole] || ROLE_CONFIG.cliente_final : null;
 
-  const menuItems = [
-    { href: "/", label: "Inicio" },
-    { href: "#servicio", label: "Servicios" },
-    { href: "/demo", label: "Demo interactiva" },
-  ];
+  // Menú adaptado por rol
+  const menuItems = useMemo(() => {
+    if (!user) {
+      return [
+        { href: "/", label: "Inicio" },
+        { href: "/explorar", label: "Explorar" },
+        { href: "/demo", label: "Demo" },
+      ];
+    }
+    if (userRole === "admin_clickcito") {
+      return [
+        { href: "/", label: "Inicio" },
+        { href: "/explorar", label: "Explorar" },
+        { href: "/dashboard", label: "Panel Admin" },
+      ];
+    }
+    if (userRole === "dueño_negocio") {
+      return [
+        { href: "/", label: "Inicio" },
+        { href: "/explorar", label: "Explorar" },
+        { href: "/dashboard", label: "Mi Negocio" },
+      ];
+    }
+    // cliente_final
+    return [
+      { href: "/", label: "Inicio" },
+      { href: "/explorar", label: "Explorar" },
+      { href: "/mis-pedidos", label: "Mis Pedidos" },
+    ];
+  }, [user, userRole]);
+  // No mostrar Navbar en el Dashboard
+  if (pathname.includes("/dashboard")) return null;
 
   return (
     <>
-      {/* Navbar principal */}
       <nav
-        className={`fixed top-0 inset-x-0 z-50 mx-auto  bg-white/90  backdrop-blur-lg border-b border-gray-200/50  shadow-md transition-all duration-300${showNavbar ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+        className={`fixed top-0 inset-x-0 z-[100] transition-all duration-500 ${showNavbar ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+          } ${scrolled
+            ? "py-3 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-white/10 shadow-lg"
+            : "py-5 bg-transparent"
           }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 opacity-20 blur-md group-hover:opacity-30 transition" />
-              <Image
-                src="/c.png"
-                alt="Logo"
-                width={32}
-                height={32}
-                priority
-                className="relative z-10 object-contain w-auto h-auto" // ✅ mantiene proporción
-              />
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="relative w-10 h-10 flex items-center justify-center bg-orange-600 rounded-xl shadow-lg shadow-orange-600/20 group-hover:scale-110 transition-transform">
+              <ShoppingBag className="text-white" size={22} />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-600 bg-clip-text text-transparent hidden sm:block">
-              Clickcito
+            <span className="text-2xl font-black tracking-tighter text-gray-900 dark:text-white uppercase italic">
+              Click<span className="text-orange-600">cito</span>
             </span>
           </Link>
 
-
           {/* Menú desktop */}
-          <div className="hidden md:flex items-center space-x-2">
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="relative px-4 py-2 text-gray-700 font-medium group rounded-lg overflow-hidden transition"
-              >
-                <span className="relative z-10 group-hover:text-yellow-600 dark:group-hover:text-yellow-400 transition-colors">
+          <div className="hidden md:flex items-center gap-8">
+            <div className="flex items-center gap-1 bg-gray-100/50 dark:bg-white/5 p-1 rounded-2xl border border-gray-200/50 dark:border-white/5">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${pathname === item.href
+                    ? "bg-white dark:bg-zinc-800 text-orange-600 shadow-sm"
+                    : "text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                >
                   {item.label}
-                </span>
-                <span className="absolute inset-0 bg-yellow-500 rounded-lg scale-0 group-hover:scale-100 transition-transform duration-300" />
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
 
-            <Link
-              href="#contacto"
-              className="relative ml-4 group flex justify-center items-center"
-            >
-              <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-full blur opacity-75 group-hover:opacity-100 transition" />
-                <div className="relative px-6 py-2.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold rounded-full shadow-lg group-hover:shadow-yellow-500/50 transition">
-                  Contáctanos
+            <div className="flex items-center gap-4">
+              {user && roleConfig ? (
+                <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-white/10">
+                  {/* Ícono de Dashboard solo para dueños y admins */}
+                  {roleConfig.canAccessDashboard && (
+                    <Link
+                      href="/dashboard"
+                      className="p-2.5 bg-gray-100 dark:bg-zinc-800 rounded-xl text-gray-600 dark:text-zinc-400 hover:text-orange-600 transition-colors"
+                    >
+                      <LayoutDashboard size={20} />
+                    </Link>
+                  )}
+
+                  {/* Dropdown del Usuario */}
+                  <div className="relative user-dropdown">
+                    <button
+                      onClick={() => setShowDropdown(!showDropdown)}
+                      className="flex items-center gap-2 p-1 pr-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-100 dark:border-zinc-700 shadow-sm transition-all hover:border-orange-500"
+                    >
+                      <div className={`w-8 h-8 rounded-lg ${roleConfig.avatarColor} flex items-center justify-center text-white font-black text-xs uppercase`}>
+                        {user.nombre?.charAt(0) || "U"}
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="text-xs font-black dark:text-white leading-none">{user.nombre?.split(' ')[0] || "Mi Cuenta"}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest leading-none mt-0.5 px-1 rounded ${roleConfig.badgeColor}`}>
+                          {roleConfig.badge}
+                        </span>
+                      </div>
+                      <ChevronDown size={14} className={`text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <div className={`absolute top-full right-0 mt-2 w-56 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-xl transition-all duration-300 overflow-hidden ${showDropdown
+                      ? 'opacity-100 translate-y-0 pointer-events-auto'
+                      : 'opacity-0 translate-y-2 pointer-events-none'
+                      }`}>
+                      {/* Info del usuario */}
+                      <div className="px-4 py-3 border-b border-gray-100 dark:border-zinc-800">
+                        <p className="text-sm font-black truncate">{user.nombre || "Usuario"}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        {user.id_negocio && (
+                          <p className="text-[10px] font-bold text-orange-600 mt-1">@{user.id_negocio}</p>
+                        )}
+                      </div>
+
+                      {/* Links según rol */}
+                      <div className="p-2">
+                        {roleConfig.dropdownItems.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-gray-600 dark:text-zinc-400 hover:bg-orange-50 dark:hover:bg-orange-600/10 hover:text-orange-600 transition-all"
+                          >
+                            <item.icon size={18} />
+                            {item.label}
+                          </Link>
+                        ))}
+                        <button
+                          onClick={() => { setShowDropdown(false); handleLogout(); }}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                        >
+                          <LogOut size={18} />
+                          Cerrar Sesión
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Link>
+              ) : !loading ? (
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-sm rounded-xl hover:scale-105 transition-transform"
+                >
+                  <LogIn size={18} />
+                  Ingresar
+                </Link>
+              ) : null}
+            </div>
           </div>
 
           {/* Botón móvil */}
           <button
             onClick={toggleMenu}
-            aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
-            className="md:hidden relative w-10 h-10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded-lg z-[100]"
+            className="md:hidden p-2.5 bg-gray-100 dark:bg-zinc-800 rounded-xl text-gray-900 dark:text-white"
           >
-            <div className="w-6 h-5 flex flex-col justify-between">
-              <span
-                className={`h-0.5 rounded-full transition-all duration-300 ${isOpen
-                  ? "rotate-45 translate-y-2.5 bg-black"
-                  : "bg-gray-800 "
-                  }`}
-              />
-              <span
-                className={`h-0.5 rounded-full transition-all duration-200 ${isOpen ? "opacity-0" : "opacity-100 bg-gray-800"
-                  }`}
-              />
-              <span
-                className={`h-0.5 rounded-full transition-all duration-300 ${isOpen
-                  ? "-rotate-45 -translate-y-2.5 bg-black"
-                  : "bg-gray-800 "
-                  }`}
-              />
-            </div>
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </nav>
 
-      {/* Menú móvil */}
+      {/* Menú móvil adaptado por rol */}
       <div
-        className={`fixed top-0 right-0 z-[999] h-screen w-full max-w-sm bg-gradient-to-br from-gray-900 via-gray-800 to-black transform transition-transform duration-500 ease-in-out md:hidden ${isOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed inset-0 z-[110] md:hidden transition-all duration-500 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           }`}
       >
-        <button
-          onClick={() => setIsOpen(false)}
-          className="absolute top-6 z-50 right-6 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm border border-white/20 transition-colors"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+        <div className={`absolute top-0 right-0 h-full w-[80%] bg-white dark:bg-zinc-900 shadow-2xl transition-transform duration-500 p-8 ${isOpen ? "translate-x-0" : "translate-x-full"
+          }`}>
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between mb-12">
+              <span className="text-2xl font-black italic">CLICK<span className="text-orange-600">CITO</span></span>
+              <button onClick={() => setIsOpen(false)} className="p-2.5 bg-gray-100 dark:bg-zinc-800 rounded-xl"><X size={24} /></button>
+            </div>
 
-        <div className="relative h-full flex flex-col justify-between p-8 pt-20">
-          <div className="flex flex-col space-y-2">
-            {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className="block px-6 py-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-yellow-500/50 transition"
-              >
-                <span className="text-2xl font-semibold text-white hover:text-yellow-400 transition">
+            <div className="flex-1 space-y-4">
+              {menuItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className="block px-6 py-4 rounded-2xl bg-gray-50 dark:bg-white/5 text-xl font-black hover:bg-orange-50 dark:hover:bg-orange-600/10 hover:text-orange-600 transition-all"
+                >
                   {item.label}
-                </span>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
 
-            <Link
-              href="#contacto"
-              onClick={() => setIsOpen(false)}
-              className="block mt-6 relative overflow-hidden rounded-xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600 opacity-90 hover:opacity-100 transition-opacity" />
-              <div className="relative px-8 py-4 text-center">
-                <span className="text-xl font-bold text-black">
-                  Contáctanos
-                </span>
-              </div>
-            </Link>
-          </div>
+            <div className="mt-auto space-y-4">
+              {user && roleConfig ? (
+                <>
+                  {/* Tarjeta de perfil con badge de rol */}
+                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl ${roleConfig.avatarColor} flex items-center justify-center text-white font-black text-xl`}>
+                      {user.nombre?.charAt(0) || "U"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-lg truncate">{user.nombre || "Mi Cuenta"}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${roleConfig.badgeColor}`}>
+                          {roleConfig.badge}
+                        </span>
+                        {user.id_negocio && (
+                          <span className="text-xs text-gray-500">@{user.id_negocio}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-          {isLoggedIn && (
-            <button
-              onClick={handleLogout}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-full transition"
-            >
-              Cerrar sesión
-            </button>
-          )}
+                  {/* Botón principal según rol */}
+                  {(roleConfig.canAccessDashboard || roleConfig.mobileButtonHref) && (
+                    <Link
+                      href={roleConfig.mobileButtonHref || "/dashboard"}
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center gap-3 w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-black font-black rounded-2xl shadow-lg"
+                    >
+                      <LayoutDashboard size={20} />
+                      {roleConfig.mobileButtonLabel}
+                    </Link>
+                  )}
 
-          <div className="pt-8 text-center pb-6">
-            <p className="text-sm text-gray-400">
-              Creado con ❤️ por{" "}
-              <Link
-                target="_blank"
-                href="https://instagram.com/nata.st44"
-                className="text-yellow-400 hover:text-yellow-300 font-semibold transition"
-              >
-                @nata.st44
-              </Link>
-            </p>
+                  <button
+                    onClick={() => { setIsOpen(false); handleLogout(); }}
+                    className="w-full py-4 text-red-500 font-black border border-red-100 dark:border-red-900/30 rounded-2xl"
+                  >
+                    Cerrar Sesión
+                  </button>
+                </>
+              ) : !loading ? (
+                <Link
+                  href="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center justify-center gap-3 w-full py-4 bg-orange-600 text-white font-black rounded-2xl shadow-lg shadow-orange-600/20"
+                >
+                  <LogIn size={20} />
+                  Iniciar Sesión
+                </Link>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Fondo oscuro detrás del menú móvil */}
-      <div
-        onClick={() => setIsOpen(false)}
-        className={`fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 md:hidden z-[40] ${isOpen ? "opacity-100 visible" : "opacity-0 invisible"
-          }`}
-      />
     </>
   );
 }

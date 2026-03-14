@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "seed": "ts-node prisma/seed.js",
+    "seed:firebase": "ts-node scripts/seed-firebase.ts",
     "start": "next start",
     "lint": "next lint",
     "deploy": "npm run build && firebase deploy"
@@ -15,6 +16,8 @@
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
+    "firebase": "^12.10.0",
+    "firebase-admin": "^13.7.0",
     "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.548.0",
