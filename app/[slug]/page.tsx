@@ -87,7 +87,10 @@ export default async function RestaurantPage(props: {
                                 {acf.phone && (
                                     <div className="flex items-center gap-2">
                                         <Phone size={18} className="text-gray-400" />
-                                        <span className="font-medium">{acf.phone}</span>
+                                        <span className="font-medium">
+                                            {acf.phone}
+
+                                        </span>
                                     </div>
                                 )}
                             </div>
