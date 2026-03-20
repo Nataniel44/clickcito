@@ -20,9 +20,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* Animación de entrada suave */
 @keyframes fade-in {
@@ -99,9 +96,7 @@ body {
   animation: bounce3 1.2s infinite ease-in-out 0.4s;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
 
 /* Entradas suaves */
 @keyframes fade-in {
@@ -179,4 +174,74 @@ body {
 
 .animate-pop-in {
   animation: pop-in 0.3s ease-out;
+}
+
+/* Custom Scrollbar Premium */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  /* gray-200 */
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #27272a;
+  /* zinc-800 */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #f97316;
+  /* orange-500 */
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.dark .custom-scrollbar {
+  scrollbar-color: #27272a transparent;
+}
+
+/* Animations for Explore Banner */
+@keyframes bounce-slow {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(6deg);
+  }
+
+  50% {
+    transform: translateY(-15px) rotate(8deg);
+  }
+}
+
+@keyframes bounce-slow-reverse {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(-12deg);
+  }
+
+  50% {
+    transform: translateY(15px) rotate(-15deg);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 4s ease-in-out infinite;
+}
+
+.animate-bounce-slow-reverse {
+  animation: bounce-slow-reverse 5s ease-in-out infinite;
 }

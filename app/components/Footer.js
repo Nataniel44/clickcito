@@ -7,8 +7,8 @@ import { MapPin, MessageCircle, Instagram, Mail, ShoppingBag, ArrowUpRight, Hear
 export default function Footer() {
   const pathname = usePathname();
 
-  // No mostrar footer en el dashboard
-  if (pathname?.includes("/dashboard")) return null;
+  // No mostrar footer en el dashboard, checkout ni en las páginas de los negocios
+  if (pathname?.includes("/dashboard") || pathname?.includes("/checkout") || pathname?.includes("/negocio")) return null;
 
   return (
     <footer id="contacto" className="relative bg-gray-950 text-white overflow-hidden">

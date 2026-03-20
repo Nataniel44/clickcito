@@ -6,102 +6,93 @@ service cloud.firestore {
     // ==========================================
     // FUNCIONES AUXILIARES (Helper Functions)
     // ==========================================
-    
-    // Verifica si el usuario actual está logueado
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Verifica si el documento de usuario tiene rol "admin_clickcito"
+    // Obtenemos la data del usuario de forma segura
+    function getUserData() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin_clickcito';
+             (getUserData().rol == 'admin_clickcito' || getUserData().rol == 'admin');
     }
 
-    // Verifica si el usuario tiene rol "dueño_negocio"
     function isDueno() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'dueño_negocio';
+             getUserData().rol == 'dueño_negocio';
     }
 
-    // Verifica si el usuario logueado está asociado al id_negocio del documento que intenta modificar
-    // Nota: El documento de usuario dueño_negocio DEBE contener una propiedad "id_negocio"
-    // para que esta regla funcione adecuadamente sin riesgo de que un aserradero modifique una pizzería.
     function isOwnerOfThisTenant(idNegocioUrl) {
-       return isDueno() && 
-              get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.id_negocio == idNegocioUrl;
+       let user = getUserData();
+       return isAuthenticated() && 
+              (user.rol == 'dueño_negocio' || user.rol == 'admin_clickcito' || user.rol == 'admin') && 
+              user.id_negocio == idNegocioUrl;
     }
-    
+
     // ==========================================
     // REGLAS POR COLECCIÓN
     // ==========================================
 
+    // COLECCIÓN PEDIDOS
+    match /pedidos/{pedidoId} {
+      allow create: if true; 
+      allow read, update, delete: if isAdmin() || isOwnerOfThisTenant(resource.data.restauranteId);
+    }
+    
     // COLECCIÓN NEGOCIOS
     match /negocios/{idNegocio} {
-      // Cualquier persona puede leer el negocio (clientes no logueados para ver el catálogo)
       allow read: if true; 
-      // Solo Admin de Clickcito puede CREAR nuevos negocios
       allow create: if isAdmin();
-      // El dueño del negocio o Super Admin puede actualizarlo
+      // Permitimos actualización si es Admin o si el id_negocio del usuario coincide con el documento
       allow update: if isAdmin() || isOwnerOfThisTenant(idNegocio);
-      // Solo el Admin puede borrar un negocio
       allow delete: if isAdmin();
     }
 
-    // COLECCIÓN PRODUCTOS DEL CATÁLOGO (Multi-Tenant)
+    // COLECCIÓN PRODUCTOS DEL CATÁLOGO
     match /productos_catalogo/{productoId} {
-      // Cualquiera puede leer el catálogo
       allow read: if true;
-      
-      // Para crear, actualizar o borrar un producto
-      // Validamos que el request tenga un id_negocio (en update usamos resource.data y en create request.resource.data)
-      allow create: if isAdmin() || 
-                    (isOwnerOfThisTenant(request.resource.data.id_negocio));
-                    
-      allow update, delete: if isAdmin() || 
-                    (isOwnerOfThisTenant(resource.data.id_negocio));
+      allow create: if isAdmin() || isOwnerOfThisTenant(request.resource.data.id_negocio);
+      allow update, delete: if isAdmin() || isOwnerOfThisTenant(resource.data.id_negocio);
     }
 
     // COLECCIÓN USUARIOS
     match /usuarios/{userId} {
-      // Un usuario sólo puede leer y escribir su propio documento (o admin general)
-      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Permitimos que el propio usuario o el admin escriban (necesario para el primer perfil)
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
     }
 
     // COLECCIÓN TRANSACCIONES
     match /transacciones/{transaccionId} {
-      // ==========================================
-      // LECTURA
-      // ==========================================
-      // Puede leer si:
-      // 1. Es el cliente_final dueño de la transacción (match id_usuario)
-      // 2. Es el dueño_negocio dueño del id_negocio al que pertenece la transacción
-      // 3. Es admin de Clickcito
       allow read: if isAuthenticated() && (
         resource.data.id_usuario == request.auth.uid || 
         isOwnerOfThisTenant(resource.data.id_negocio) ||
         isAdmin()
       );
-
-      // ==========================================
-      // CREACIÓN
-      // ==========================================
-      // Cualquier usuario autenticado (cliente final) puede crear una transacción hacia un negocio.
-      // Se obliga que el id_usuario enviado en la transacción sea igual al auth.uid real
-      allow create: if isAuthenticated() && 
-                    request.resource.data.id_usuario == request.auth.uid;
-
-      // ==========================================
-      // ACTUALIZACIÓN (Cambios de estado)
-      // ==========================================
-      // Solo el dueño del negocio o un Admin pueden cambiar el estado o modificar la transacción
-      allow update: if isAuthenticated() && (
-         isOwnerOfThisTenant(resource.data.id_negocio) || 
-         isAdmin()
-      );
-      
-      // Borrar transacciones generalmente no es recomendado, lo limitamos al admin
+      allow create: if true;
+      allow update: if isAdmin() || isOwnerOfThisTenant(resource.data.id_negocio);
       allow delete: if isAdmin();
+    }
+
+    // COLECCIÓN REPORTES DE PEDIDOS
+    match /reportes_pedidos/{reporteId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin() || 
+        isOwnerOfThisTenant(resource.data.id_negocio)
+      );
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || isOwnerOfThisTenant(resource.data.id_negocio);
+    }
+
+    // COLECCIÓN LOGS DE ACTIVIDAD
+    match /actividad_logs/{logId} {
+      allow read: if isAdmin() || isOwnerOfThisTenant(resource.data.id_negocio);
+      allow create: if isAdmin() || isOwnerOfThisTenant(request.resource.data.id_negocio);
+      allow update, delete: if false;
     }
   }
 }

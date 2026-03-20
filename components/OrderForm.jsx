@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Image from "next/image";
 
 export default function OrderForm({ logo, deliveryType, onClose }) {
   const [form, setForm] = useState({
@@ -30,7 +31,7 @@ export default function OrderForm({ logo, deliveryType, onClose }) {
       {/* Logo */}
       {logo && (
         <div className="flex justify-center mb-2">
-          <img src={logo} alt="Pizza Pepa" className="w-24 h-auto" />
+          <Image src={logo} alt="Logo" width={96} height={96} className="w-24 h-auto" />
         </div>
       )}
       {/* Modo de entrega */}
@@ -132,8 +133,8 @@ export default function OrderForm({ logo, deliveryType, onClose }) {
                 {option === "efectivo"
                   ? ""
                   : option === "qr"
-                  ? ""
-                  : ""}
+                    ? ""
+                    : ""}
               </span>
               {option.charAt(0).toUpperCase() + option.slice(1)}
             </button>

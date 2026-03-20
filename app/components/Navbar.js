@@ -10,6 +10,7 @@ import {
   ShoppingBag, Menu, X, LogOut, LayoutDashboard,
   ChevronDown, LogIn, Shield, Store, User, ShieldCheck, Package
 } from "lucide-react";
+import Image from "next/image";
 
 // Configuración de roles
 const ROLE_CONFIG = {
@@ -21,6 +22,19 @@ const ROLE_CONFIG = {
     canAccessDashboard: true,
     dropdownItems: [
       { href: "/dashboard", label: "Panel Admin", icon: ShieldCheck },
+      { href: "/mis-pedidos", label: "Mis Compras", icon: Package },
+    ],
+    mobileButtonLabel: "Panel Admin",
+  },
+  admin: {
+    badge: "Admin",
+    badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-600/20 dark:text-purple-400",
+    avatarColor: "bg-purple-600",
+    icon: ShieldCheck,
+    canAccessDashboard: true,
+    dropdownItems: [
+      { href: "/dashboard", label: "Panel Admin", icon: ShieldCheck },
+      { href: "/mis-pedidos", label: "Mis Compras", icon: Package },
     ],
     mobileButtonLabel: "Panel Admin",
   },
@@ -32,6 +46,7 @@ const ROLE_CONFIG = {
     canAccessDashboard: true,
     dropdownItems: [
       { href: "/dashboard", label: "Panel Control", icon: LayoutDashboard },
+      { href: "/mis-pedidos", label: "Mis Compras", icon: Package },
     ],
     mobileButtonLabel: "Ir al Panel",
   },
@@ -109,10 +124,11 @@ export default function Navbar() {
         { href: "/demo", label: "Demo" },
       ];
     }
-    if (userRole === "admin_clickcito") {
+    if (userRole === "admin_clickcito" || userRole === "admin") {
       return [
         { href: "/", label: "Inicio" },
         { href: "/explorar", label: "Explorar" },
+        { href: "/mis-pedidos", label: "Mis Pedidos" },
         { href: "/dashboard", label: "Panel Admin" },
       ];
     }
@@ -120,6 +136,7 @@ export default function Navbar() {
       return [
         { href: "/", label: "Inicio" },
         { href: "/explorar", label: "Explorar" },
+        { href: "/mis-pedidos", label: "Mis Pedidos" },
         { href: "/dashboard", label: "Mi Negocio" },
       ];
     }
@@ -130,8 +147,8 @@ export default function Navbar() {
       { href: "/mis-pedidos", label: "Mis Pedidos" },
     ];
   }, [user, userRole]);
-  // No mostrar Navbar en el Dashboard
-  if (pathname.includes("/dashboard")) return null;
+  // No mostrar Navbar en el Dashboard o Checkout
+  if (pathname.includes("/dashboard") || pathname.includes("/checkout")) return null;
 
   return (
     <>
@@ -145,12 +162,9 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative w-10 h-10 flex items-center justify-center bg-orange-600 rounded-xl shadow-lg shadow-orange-600/20 group-hover:scale-110 transition-transform">
-              <ShoppingBag className="text-white" size={22} />
-            </div>
-            <span className="text-2xl font-black tracking-tighter text-gray-900 dark:text-white uppercase italic">
-              Click<span className="text-orange-600">cito</span>
-            </span>
+
+            <Image src="/log.png" alt="Logo" className="w-40" width={200} height={100} />
+
           </Link>
 
           {/* Menú desktop */}
@@ -172,7 +186,7 @@ export default function Navbar() {
 
             <div className="flex items-center gap-4">
               {user && roleConfig ? (
-                <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-white/10">
+                <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-white/10 animate-in fade-in duration-500">
                   {/* Ícono de Dashboard solo para dueños y admins */}
                   {roleConfig.canAccessDashboard && (
                     <Link
@@ -238,7 +252,17 @@ export default function Navbar() {
                     </div>
                   </div>
                 </div>
-              ) : !loading ? (
+              ) : loading ? (
+                <div className="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-white/10 animate-pulse">
+                  <div className="flex items-center gap-2 p-1 pr-3 bg-white dark:bg-zinc-800 rounded-xl border border-gray-100 dark:border-zinc-700 w-32 h-10">
+                    <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-zinc-700" />
+                    <div className="flex flex-col gap-1">
+                      <div className="h-2 w-12 bg-gray-200 dark:bg-zinc-700 rounded-full" />
+                      <div className="h-1.5 w-8 bg-gray-100 dark:bg-zinc-700/50 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <Link
                   href="/login"
                   className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-sm rounded-xl hover:scale-105 transition-transform"
@@ -246,7 +270,7 @@ export default function Navbar() {
                   <LogIn size={18} />
                   Ingresar
                 </Link>
-              ) : null}
+              )}
             </div>
           </div>
 
@@ -327,7 +351,18 @@ export default function Navbar() {
                     Cerrar Sesión
                   </button>
                 </>
-              ) : !loading ? (
+              ) : loading ? (
+                <div className="space-y-4 animate-pulse">
+                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-gray-200 dark:bg-zinc-800" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 bg-gray-200 dark:bg-zinc-800 rounded-full" />
+                      <div className="h-2 w-20 bg-gray-100 dark:bg-zinc-700 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="h-14 w-full bg-gray-100 dark:bg-zinc-800 rounded-2xl" />
+                </div>
+              ) : (
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
@@ -336,7 +371,7 @@ export default function Navbar() {
                   <LogIn size={20} />
                   Iniciar Sesión
                 </Link>
-              ) : null}
+              )}
             </div>
           </div>
         </div>

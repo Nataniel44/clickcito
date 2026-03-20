@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     Loader2,
     CheckCircle2,
@@ -81,13 +81,9 @@ export const OrderStatusTracker: React.FC<Props> = ({ orderId, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchOrderStatus();
-        const interval = setInterval(fetchOrderStatus, 10000);
-        return () => clearInterval(interval);
-    }, [orderId]);
 
-    const fetchOrderStatus = async () => {
+
+    const fetchOrderStatus = useCallback(async () => {
         try {
             const res = await fetch(`/api/orders/${orderId}`);
             if (!res.ok) throw new Error("Error al obtener el pedido");
@@ -99,7 +95,13 @@ export const OrderStatusTracker: React.FC<Props> = ({ orderId, onClose }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [orderId]);
+
+    useEffect(() => {
+        fetchOrderStatus();
+        const interval = setInterval(fetchOrderStatus, 10000);
+        return () => clearInterval(interval);
+    }, [fetchOrderStatus]);
 
     const getCurrentStepIndex = () => {
         if (!order) return 0;

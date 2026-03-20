@@ -21,7 +21,7 @@ export const CategorySelector: React.FC<Props> = ({
     onSelectCategory,
     onSelectSubcategory,
 }) => {
-    const categoryRef = useRef<HTMLDivElement>(null);
+    const categoryRef = useRef<HTMLDivElement | null>(null);
     const [showSubcategories, setShowSubcategories] = useState(false);
     const [topPosition, setTopPosition] = useState("top-20");
 
@@ -55,7 +55,7 @@ export const CategorySelector: React.FC<Props> = ({
     const hasSubcategories = activeCat && activeCat.subcategories?.length > 0;
 
     const scrollToCenter = (
-        containerRef: React.RefObject<HTMLDivElement>,
+        containerRef: React.RefObject<HTMLDivElement | null>,
         element: HTMLElement
     ) => {
         const container = containerRef.current;

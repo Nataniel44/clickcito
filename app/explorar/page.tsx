@@ -1,332 +1,317 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
-import { getAllNegocios, getProductosByNegocio } from "@/app/firebase/db";
-import {
-    Search, MapPin, Store, ShoppingBag, Clock,
-    Star, ArrowRight, SlidersHorizontal, X,
-    Utensils, Shirt, Scissors, Hammer, Package
-} from "lucide-react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { getAllNegocios } from "@/app/firebase/db";
+import { Star, ShoppingBag } from "lucide-react";
 
-// Configuración de rubros con íconos y colores
-const RUBRO_CONFIG: Record<string, { label: string; icon: any; color: string; bgLight: string; emoji: string }> = {
-    gastronomia: { label: "Gastronomía", icon: Utensils, color: "text-orange-600", bgLight: "bg-orange-50 border-orange-200", emoji: "🍔" },
-    retail: { label: "Retail & Moda", icon: Shirt, color: "text-blue-600", bgLight: "bg-blue-50 border-blue-200", emoji: "👗" },
-    servicios: { label: "Servicios", icon: Scissors, color: "text-purple-600", bgLight: "bg-purple-50 border-purple-200", emoji: "💇" },
-    construccion: { label: "Materiales", icon: Hammer, color: "text-emerald-600", bgLight: "bg-emerald-50 border-emerald-200", emoji: "🪵" },
-    default: { label: "Negocio", icon: Store, color: "text-gray-600", bgLight: "bg-gray-50 border-gray-200", emoji: "🏪" },
+// Componentes modularizados
+import { RUBRO_CONFIG, Negocio } from "@/components/explorar/types";
+import { BusinessCard } from "@/components/explorar/BusinessCard";
+import { BusinessResultItem } from "@/components/explorar/BusinessResultItem";
+import { SectionCarousel } from "@/components/explorar/SectionCarousel";
+import { ExploreHero } from "@/components/explorar/ExploreHero";
+import { PromoBanner } from "@/components/explorar/PromoBanner";
+import { EmptyResults } from "@/components/explorar/EmptyResults";
+import { FooterCTA } from "@/components/explorar/FooterCTA";
+
+// Helper para distancia (KM)
+const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 };
 
-function getRubroConfig(rubro: string) {
-    return RUBRO_CONFIG[rubro] || RUBRO_CONFIG.default;
-}
-
-// Componente: Tarjeta de Negocio
-function BusinessCard({ negocio, productCount }: { negocio: any; productCount: number }) {
-    const config = getRubroConfig(negocio.rubro || "default");
-    const IconComponent = config.icon;
-
-    return (
-        <Link
-            href={`/negocio/${negocio.id}`}
-            className="group bg-white dark:bg-zinc-900 rounded-[2rem] border border-gray-100 dark:border-zinc-800 overflow-hidden hover:shadow-2xl hover:shadow-orange-500/5 transition-all duration-500 hover:-translate-y-1 flex flex-col"
-        >
-            {/* Banner */}
-            <div className="relative h-36 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950 overflow-hidden">
-                <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${negocio.rubro === "gastronomia" ? "from-orange-500 to-amber-500" :
-                    negocio.rubro === "retail" ? "from-blue-500 to-indigo-500" :
-                        negocio.rubro === "servicios" ? "from-purple-500 to-pink-500" :
-                            negocio.rubro === "construccion" ? "from-emerald-500 to-teal-500" :
-                                "from-gray-500 to-gray-600"
-                    }`} />
-                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
-
-                {/* Badge de rubro */}
-                <div className={`absolute z-10 top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${config.bgLight} border`}>
-                    <IconComponent size={14} className={config.color} />
-                    <span className={config.color}>{config.label}</span>
-                </div>
-
-                {/* Indicador online */}
-                {negocio.activo !== false && (
-                    <div className="absolute z-10 top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-black text-green-700 uppercase">Abierto</span>
-                    </div>
-                )}
-
-                {/* Avatar grande */}
-                <div className="absolute bottom-1/2 left-1/2 -translate-x-1/2 translate-y-1/2 z-0">
-                    <div className="w-20 h-20 rounded-2xl bg-white dark:bg-zinc-800 border-4 border-white dark:border-zinc-900 shadow-xl flex items-center justify-center text-3xl font-black text-gray-300 dark:text-zinc-600 group-hover:scale-110 transition-transform">
-                        {negocio.logo_url ? (
-                            <img src={negocio.logo_url} alt={negocio.nombre} className="w-full h-full object-cover rounded-xl" />
-                        ) : (
-                            <span>{config.emoji}</span>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Content */}
-            <div className="pt-14 px-6 pb-6 flex-1 flex flex-col">
-                <div className="text-center mb-4">
-                    <h3 className="text-xl font-black text-gray-900 dark:text-white group-hover:text-orange-600 transition-colors truncate">
-                        {negocio.nombre}
-                    </h3>
-                    {negocio.descripcion && (
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2 font-medium">
-                            {negocio.descripcion}
-                        </p>
-                    )}
-                </div>
-
-                {/* Meta info */}
-                <div className="flex flex-wrap justify-center gap-3 mb-5">
-                    {negocio.ubicacion && (
-                        <span className="flex items-center gap-1 text-xs text-gray-500 font-bold">
-                            <MapPin size={12} />
-                            {negocio.ubicacion}
-                        </span>
-                    )}
-                    <span className="flex items-center gap-1 text-xs text-gray-500 font-bold">
-                        <Package size={12} />
-                        {productCount} productos
-                    </span>
-                </div>
-
-                {/* CTA */}
-                <div className="mt-auto">
-                    <div className="flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-zinc-800 rounded-2xl text-sm font-black text-gray-900 dark:text-white group-hover:bg-orange-600 group-hover:text-white transition-all">
-                        Ver catálogo
-                        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </div>
-                </div>
-            </div>
-        </Link>
-    );
-}
-
-// Componente: Chip de filtro
-function FilterChip({ active, onClick, label, icon: Icon, count }: { active: boolean; onClick: () => void; label: string; icon?: any; count?: number }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-black transition-all whitespace-nowrap ${active
-                ? "bg-gray-900 dark:bg-white text-white dark:text-black shadow-lg"
-                : "bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-400 border border-gray-200 dark:border-zinc-800 hover:border-gray-300"
-                }`}
-        >
-            {Icon && <Icon size={16} />}
-            {label}
-            {count !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? "bg-white/20" : "bg-gray-100 dark:bg-zinc-800"}`}>{count}</span>
-            )}
-        </button>
-    );
-}
-
-// Página Principal
 export default function ExplorarPage() {
-    const [negocios, setNegocios] = useState<any[]>([]);
-    const [productCounts, setProductCounts] = useState<Record<string, number>>({});
+    const [negocios, setNegocios] = useState<Negocio[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [activeRubro, setActiveRubro] = useState("todos");
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [isLocating, setIsLocating] = useState(false);
 
     useEffect(() => {
         async function fetchNegocios() {
             try {
                 const data = await getAllNegocios();
-                setNegocios(data);
-
-                // Obtener conteo de productos para cada negocio
-                const counts: Record<string, number> = {};
-                await Promise.all(
-                    data.map(async (negocio: any) => {
-                        try {
-                            const productos = await getProductosByNegocio(negocio.id);
-                            counts[negocio.id] = productos.length;
-                        } catch {
-                            counts[negocio.id] = 0;
-                        }
-                    })
-                );
-                setProductCounts(counts);
+                // "Sistema de recomendación" -> Barajar con semilla diaria para consistencia
+                const today = new Date().toDateString();
+                const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                const shuffled = [...data].sort((a, b) => {
+                    const hashA = (a.id || "").split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + seed;
+                    const hashB = (b.id || "").split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + seed;
+                    return (hashA % 100) - (hashB % 100);
+                }) as Negocio[];
+                setNegocios(shuffled);
             } catch (error) {
-                console.error("Error cargando negocios:", error);
+                console.error("Error:", error);
             } finally {
                 setLoading(false);
+                window.scrollTo({ top: 0, behavior: "instant" });
             }
         }
         fetchNegocios();
     }, []);
 
-    // Filtrar negocios
-    const negociosFiltrados = useMemo(() => {
-        return negocios.filter((negocio) => {
-            const matchesSearch =
-                negocio.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                negocio.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                negocio.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesRubro = activeRubro === "todos" || negocio.rubro === activeRubro;
-            return matchesSearch && matchesRubro;
-        });
-    }, [negocios, searchTerm, activeRubro]);
+    const lastScrollY = useRef(0);
+    const [showNavbar, setShowNavbar] = useState(true);
+    const resultsRef = useRef<HTMLDivElement>(null);
 
-    // Conteo por rubro
-    const rubroCounts = useMemo(() => {
-        const counts: Record<string, number> = { todos: negocios.length };
+    const isIdle = searchTerm === "" && activeRubro === "todos" && !userLocation;
+
+    // Auto-scroll logic when filtering
+    useEffect(() => {
+        if ((searchTerm || activeRubro !== "todos" || userLocation) && !isIdle) {
+            const timer = setTimeout(() => {
+                const offset = 140; // Espacio para el Navbar + Sticky Header
+                const elementPosition = resultsRef.current?.getBoundingClientRect().top;
+                const offsetPosition = (elementPosition || 0) + window.pageYOffset - offset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [activeRubro, searchTerm, isIdle, userLocation]);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY < lastScrollY.current || currentScrollY < 10) {
+                setShowNavbar(true);
+            } else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+                setShowNavbar(false);
+            }
+            lastScrollY.current = currentScrollY;
+        };
+
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    const handleGetLocation = () => {
+        if (!navigator.geolocation) return;
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                setUserLocation({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude
+                });
+                setIsLocating(false);
+                // Si detectamos ubicación, podemos resetear rubro o búsqueda para mostrar "Cerca de ti"
+                // O simplemente dejar que el filtro actúe si hay coordenadas en los negocios
+            },
+            (err) => {
+                console.error("Geolocation error:", err);
+                setIsLocating(false);
+            }
+        );
+    };
+
+    const handleClearFilters = () => {
+        setSearchTerm("");
+        setActiveRubro("todos");
+        setUserLocation(null);
+    };
+
+    const filtered = useMemo(() => {
+        const result = negocios.filter((n) => {
+            const nameSearch = n.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+            const descSearch = n.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
+            const locSearch = n.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
+            const match = nameSearch || descSearch || locSearch;
+            const rubroMatch = activeRubro === "todos" || n.rubro === activeRubro;
+            return match && rubroMatch;
+        }).map(n => {
+            let distance: number | undefined;
+            if (userLocation && n.coordenadas) {
+                distance = getDistance(
+                    userLocation.lat,
+                    userLocation.lng,
+                    n.coordenadas.lat,
+                    n.coordenadas.lng
+                );
+            }
+            return { ...n, distance };
+        });
+
+        if (userLocation) {
+            return result.sort((a, b) => {
+                if (a.distance !== undefined && b.distance !== undefined) {
+                    return a.distance - b.distance;
+                }
+                if (a.distance !== undefined) return -1;
+                if (b.distance !== undefined) return 1;
+                return 0;
+            });
+        }
+        return result;
+    }, [negocios, searchTerm, activeRubro, userLocation]);
+
+    // Agrupación por rubros
+    const negociosPorRubro = useMemo(() => {
+        const categories: Record<string, Negocio[]> = {};
         negocios.forEach(n => {
             const rubro = n.rubro || "default";
-            counts[rubro] = (counts[rubro] || 0) + 1;
+            if (!categories[rubro]) categories[rubro] = [];
+            categories[rubro].push(n);
         });
-        return counts;
+        return categories;
     }, [negocios]);
+
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD] dark:bg-[#0A0A0A]">
-                <div className="text-center">
-                    <div className="relative w-16 h-16 mx-auto mb-6">
-                        <div className="absolute inset-0 border-4 border-gray-200 dark:border-zinc-800 rounded-full" />
-                        <div className="absolute inset-0 border-4 border-transparent border-t-orange-500 rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD] dark:bg-[#060606]">
+                <div className="animate-pulse flex flex-col items-center">
+                    <div className="w-20 h-20 bg-orange-100 dark:bg-zinc-900 rounded-[2.5rem] mb-6 flex items-center justify-center">
+                        <ShoppingBag size={32} className="text-orange-500" />
                     </div>
-                    <p className="text-gray-500 font-black text-lg">Cargando negocios...</p>
-                    <p className="text-gray-400 text-sm font-medium mt-1">Descubrí los comercios de tu zona</p>
+                    <div className="h-2 w-32 bg-gray-100 dark:bg-zinc-900 rounded-full" />
                 </div>
             </div>
         );
     }
 
+
     return (
-        <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] pt-24 pb-16">
-            {/* Header */}
-            <div className="px-6 mb-8">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
-                        <div>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="p-2.5 bg-orange-600 rounded-xl shadow-lg shadow-orange-600/20">
-                                    <Store className="text-white" size={24} />
-                                </div>
-                                <span className="text-sm font-black text-orange-600 uppercase tracking-[0.2em]">Explorar</span>
-                            </div>
-                            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white tracking-tight">
-                                Negocios <span className="text-gray-300 dark:text-zinc-600">cerca tuyo</span>
-                            </h1>
-                            <p className="text-gray-500 font-medium mt-2 text-lg">
-                                {negocios.length} {negocios.length === 1 ? "negocio disponible" : "negocios disponibles"} en la plataforma
-                            </p>
-                        </div>
-                    </div>
+        <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#060606] selection:bg-orange-100 selection:text-orange-600 pt-28 md:pt-28 pb-20">
+            <div className="max-w-8xl mx-auto px-6">
 
-                    {/* Barra de búsqueda */}
-                    <div className="relative mb-6">
-                        <Search size={22} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nombre, rubro o ubicación..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-14 pr-12 py-4 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-zinc-800 text-gray-900 dark:text-white font-bold placeholder:text-gray-400 placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 shadow-sm text-lg transition-all"
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm("")}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 bg-gray-100 dark:bg-zinc-800 rounded-lg hover:bg-gray-200 transition-colors"
-                            >
-                                <X size={16} className="text-gray-500" />
-                            </button>
-                        )}
-                    </div>
+                <ExploreHero
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    activeRubro={activeRubro}
+                    setActiveRubro={setActiveRubro}
+                    onLocationClick={handleGetLocation}
+                    isLocating={isLocating}
+                />
 
-                    {/* Filtros por rubro */}
-                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                        <FilterChip
-                            active={activeRubro === "todos"}
-                            onClick={() => setActiveRubro("todos")}
-                            label="Todos"
-                            icon={SlidersHorizontal}
-                            count={rubroCounts.todos}
+                {isIdle ? (
+                    <div className="space-y-12 animate-fade-in">
+                        {/* Recomendados */}
+                        <SectionCarousel
+                            title="Seleccionados para vos"
+                            icon="✨"
+                            subtitle="Los mejores negocios de la zona"
+                            negocios={negocios.slice(0, 6)}
                         />
-                        {Object.entries(RUBRO_CONFIG).filter(([key]) => key !== "default").map(([key, config]) => (
-                            <FilterChip
+
+                        {/* Por rubros */}
+                        {Object.entries(negociosPorRubro).map(([key, list]) => (
+                            <SectionCarousel
                                 key={key}
-                                active={activeRubro === key}
-                                onClick={() => setActiveRubro(key)}
-                                label={config.label}
-                                icon={config.icon}
-                                count={rubroCounts[key] || 0}
+                                title={RUBRO_CONFIG[key]?.label || key}
+                                icon={RUBRO_CONFIG[key]?.emoji || "📍"}
+                                negocios={list}
+                                subtitle={`Lo mejor en ${RUBRO_CONFIG[key]?.label.toLowerCase()}`}
                             />
                         ))}
-                    </div>
-                </div>
-            </div>
 
-            {/* Grid de Negocios */}
-            <div className="px-6">
-                <div className="max-w-6xl mx-auto">
-                    {negociosFiltrados.length === 0 ? (
-                        <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-dashed border-gray-300 dark:border-zinc-800 p-16 text-center">
-                            <div className="w-24 h-24 bg-gray-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Store size={48} className="text-gray-300 dark:text-zinc-600" />
+                        {/* Banner */}
+                        <PromoBanner />
+
+                    </div>
+                ) : (
+                    <div ref={resultsRef} className="animate-fade-in max-w-5xl mx-auto">
+                        <div className="flex flex-col gap-6">
+                            {/* Sticky Search Header - Integrated with Navbar on Mobile */}
+                            <div
+                                className="sticky z-30 -mx-4 md:mx-0 px-4 py-3 md:py-4 bg-[#FDFDFD] dark:bg-[#060606] border-b border-gray-100 dark:border-zinc-800/80 shadow-sm md:shadow-none transition-all duration-500 ease-in-out"
+                                style={{ top: showNavbar ? '68px' : '0px' }}
+                            >
+                                <div className="flex flex-col gap-2.5 max-w-5xl mx-auto">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-[12px] md:text-[14px] font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                            {filtered.length} Resultados
+                                            {searchTerm && <span className="text-orange-600 truncate max-w-[120px]">&quot;{searchTerm}&quot;</span>}
+                                            {activeRubro !== "todos" && <span className="px-1 py-0.5 bg-orange-50 dark:bg-orange-600/10 text-orange-600 rounded text-[9px] uppercase tracking-tighter">{RUBRO_CONFIG[activeRubro]?.label}</span>}
+                                        </h2>
+                                        <button
+                                            onClick={handleClearFilters}
+                                            className="text-[10px] font-bold text-gray-400 hover:text-orange-600 transition-colors uppercase"
+                                        >
+                                            Limpiar
+                                        </button>
+                                    </div>
+
+                                    {/* Category Search Filter - Compact horizontal scroll */}
+                                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
+                                        <button
+                                            onClick={() => setActiveRubro("todos")}
+                                            className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === "todos"
+                                                ? "bg-orange-600 text-white border-orange-600"
+                                                : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800"}`}
+                                        >
+                                            Todos
+                                        </button>
+                                        {Object.entries(RUBRO_CONFIG).filter(([k]) => k !== "default").map(([key, config]) => (
+                                            <button
+                                                key={key}
+                                                onClick={() => setActiveRubro(key)}
+                                                className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === key
+                                                    ? "bg-orange-600 text-white border-orange-600"
+                                                    : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800"}`}
+                                            >
+                                                {config.label}
+                                            </button>
+                                        ))}
+                                        {/* Quick Filters */}
+                                        <div className="w-[1px] h-4 bg-gray-100 dark:bg-zinc-800 shrink-0 mx-1" />
+                                        <button className="px-4 py-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-[11px] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap hover:border-orange-500 transition-colors">
+                                            Abiertos
+                                        </button>
+                                        {userLocation && (
+                                            <div className="px-4 py-2 bg-green-500 text-white rounded-xl text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-md shadow-green-500/10">
+                                                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                                                Cerca
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-                                {searchTerm ? "Sin resultados" : "Aún no hay negocios en esta categoría"}
-                            </h2>
-                            <p className="text-gray-500 dark:text-zinc-400 text-lg font-medium">
-                                {searchTerm
-                                    ? `No encontramos negocios para "${searchTerm}". Probá con otra búsqueda.`
-                                    : "Pronto se sumarán nuevos comercios a la plataforma."
-                                }
-                            </p>
-                            {searchTerm && (
-                                <button
-                                    onClick={() => { setSearchTerm(""); setActiveRubro("todos"); }}
-                                    className="mt-6 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black font-black rounded-2xl hover:scale-105 transition-transform"
-                                >
-                                    Limpiar búsqueda
-                                </button>
+
+                            {filtered.length > 0 ? (
+                                <div className="bg-white dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm">
+                                    <div className="flex flex-col">
+                                        {filtered.map((n) => (
+                                            <BusinessResultItem key={n.id} negocio={n} distancia={n.distance} />
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <EmptyResults onClear={handleClearFilters} />
                             )}
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {negociosFiltrados.map((negocio) => (
-                                <BusinessCard
-                                    key={negocio.id}
-                                    negocio={negocio}
-                                    productCount={productCounts[negocio.id] || 0}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                <FooterCTA />
             </div>
 
-            {/* CTA Bottom */}
-            <div className="px-6 mt-16">
-                <div className="max-w-6xl mx-auto">
-                    <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-950 rounded-[2.5rem] p-8 sm:p-12 text-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/10 rounded-full blur-[100px]" />
-                        <div className="relative">
-                            <h2 className="text-3xl font-black text-white mb-3">
-                                ¿Tenés un negocio? <span className="text-orange-500">Sumáte gratis</span>
-                            </h2>
-                            <p className="text-gray-400 font-medium text-lg mb-8 max-w-xl mx-auto">
-                                Creá tu tienda digital en minutos y empezá a recibir pedidos de toda la zona.
-                            </p>
-                            <Link
-                                href="/login"
-                                className="inline-flex items-center gap-3 px-8 py-4 bg-orange-600 text-white font-black rounded-2xl shadow-xl shadow-orange-600/20 hover:scale-105 transition-transform"
-                            >
-                                <ShoppingBag size={20} />
-                                Crear mi Tienda
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <style jsx global>{`
+                .no-scrollbar::-webkit-scrollbar {
+                    display: none;
+                }
+                .no-scrollbar {
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+                @keyframes fade-in {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in {
+                    animation: fade-in 0.6s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 }

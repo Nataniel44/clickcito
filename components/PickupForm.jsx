@@ -1,5 +1,6 @@
 // filepath: c:\Users\Usuario\linksgastronomi\components\PickupForm.jsx
 import { useState } from "react";
+import Image from "next/image";
 
 export default function PickupForm({ logo, deliveryType }) {
   const [form, setForm] = useState({
@@ -26,7 +27,7 @@ export default function PickupForm({ logo, deliveryType }) {
       {/* Logo */}
       {logo && (
         <div className="flex justify-center mb-2">
-          <img src={logo} alt="Pizza Pepa" className="w-24 h-auto" />
+          <Image src={logo} alt="Logo" width={96} height={96} className="w-24 h-auto" />
         </div>
       )}
       {/* Modo de entrega */}
@@ -99,7 +100,7 @@ export default function PickupForm({ logo, deliveryType }) {
       </div>
       {/* Botones */}
       <div className="flex justify-between mt-4">
-        <button type="button" aria-label=""  className="border border-[#D58A17] text-[#D58A17] px-4 py-2 rounded font-semibold">
+        <button type="button" aria-label="" className="border border-[#D58A17] text-[#D58A17] px-4 py-2 rounded font-semibold">
           Atrás
         </button>
         <button type="submit" className="bg-[#D58A17] text-white px-4 py-2 rounded font-semibold">

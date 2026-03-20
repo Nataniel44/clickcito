@@ -16,7 +16,7 @@
     "incremental": true,
     "module": "esnext",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -36,13 +36,13 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "next-env.d.ts",
-    "out/types/**/*.ts",
-    ".next/types/**/*.ts",
     "components/Services.tsx",
     "index.ts",
     "lib/prisma.js",
-    "prisma/elys.js"
+    "next-env.d.ts",
+    "out/types/**/*.ts",
+    "prisma/elys.js",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

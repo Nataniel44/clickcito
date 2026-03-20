@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { List, Loader2 } from "lucide-react";
 import { OrderStatusTracker } from "./OrderStatusTracker";
 import { useCustomerPhone } from "./hooks/useCustomerPhone";
@@ -16,7 +16,7 @@ export default function OrderHistory({
     const [open, setOpen] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
-    const fetchOrders = async () => {
+    const fetchOrders = useCallback(async () => {
         if (!phone) {
             console.log("No hay teléfono guardado");
             return;
@@ -36,13 +36,13 @@ export default function OrderHistory({
         } finally {
             setLoading(false);
         }
-    };
+    }, [phone, restaurantId]);
 
     useEffect(() => {
         if (open && isLoaded) {
             fetchOrders();
         }
-    }, [open, phone, isLoaded]);
+    }, [open, isLoaded, fetchOrders]);
 
     if (!isLoaded || !phone) return null;
 

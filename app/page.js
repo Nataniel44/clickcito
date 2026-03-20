@@ -1,282 +1,120 @@
 import Link from "next/link";
+import {
+  Rocket,
+  Store,
+  ArrowRight,
+  Search,
+  Users,
+  Sparkles,
+  CheckCircle2,
+  ShoppingBag,
+  Clock,
+  MessageCircle,
+  Zap
+} from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#FDFDFD] overflow-x-hidden">
+    <main className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] overflow-x-hidden selection:bg-orange-100 selection:text-orange-600">
 
       {/* ═══════════════════════════════════════════ */}
-      {/* HERO SECTION */}
+      {/* HERO: DIRECT & PUNCHY */}
       {/* ═══════════════════════════════════════════ */}
-      <section className="relative min-h-[90vh] flex items-center justify-center px-6 pt-28 pb-20">
-        {/* Background Decorations */}
+      <section className="relative min-h-screen flex items-center justify-center px-6 pt-28">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-[-10%] w-[500px] h-[500px] bg-orange-500/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-[-10%] w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/3 rounded-full blur-[120px]" />
+          <div className="absolute top-[10%] left-[-5%] w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute bottom-[10%] right-[-5%] w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-full mb-8">
-            <span className="flex h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm font-bold text-orange-700">Disponible en San Vicente y toda Misiones</span>
-          </div>
+        <div className="relative z-10 max-w-6xl mx-auto text-center">
 
-          <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black text-gray-900 tracking-tight leading-[0.9] mb-8">
-            Llevá tu negocio
-            <br />
-            <span className="bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 bg-clip-text text-transparent">
-              al mundo digital
+
+          <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black text-gray-900 dark:text-white tracking-tight leading-[0.85] mb-10">
+            Tu tienda.<br />
+            <span className="bg-gradient-to-r from-orange-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
+              Sin límites.
             </span>
-            <br />
-            en un click.
           </h1>
 
-          <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
-            Clickcito es la plataforma que adapta tu negocio al ecommerce sin importar el rubro.
-            <span className="text-gray-900 font-bold"> Comida, ropa, servicios o materiales pesados</span> — tenemos la solución exacta para vos.
+          <p className="text-xl sm:text-2xl text-gray-500 dark:text-zinc-400 max-w-2xl mx-auto mb-12 leading-relaxed font-medium">
+            Clickcito es la forma más rápida de vender online.
+            <span className="text-gray-900 dark:text-white font-bold"> Gastronomía, Minimercados, Tiendas o Servicios</span> — creá tu catálogo y empezá hoy mismo.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login"
-              className="group relative w-full sm:w-auto"
-            >
-              <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-amber-500 rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition" />
-              <div className="relative flex items-center justify-center gap-3 px-10 py-5 bg-gradient-to-r from-orange-600 to-orange-500 text-white font-black text-lg rounded-2xl shadow-xl transition-transform group-hover:scale-[1.02]">
-                🚀 Crear tienda gratis
+            <Link href="/login" className="group relative w-full sm:w-auto">
+              <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-orange-400 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500" />
+              <div className="relative flex items-center justify-center gap-3 px-10 py-5 bg-orange-600 text-white font-black text-lg rounded-2xl shadow-xl transition-all hover:scale-[1.03] active:scale-95">
+                <Rocket size={20} /> Empezar Gratis
               </div>
             </Link>
-            <Link
-              href="#modulos"
-              className="w-full sm:w-auto px-10 py-5 bg-white border-2 border-gray-200 text-gray-900 font-black text-lg rounded-2xl hover:border-orange-500 hover:text-orange-600 transition-all text-center"
-            >
-              Ver soluciones →
+            <Link href="/explorar" className="flex items-center justify-center gap-3 px-10 py-5 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-900 dark:text-white font-black text-lg rounded-2xl hover:border-indigo-500/50 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all w-full sm:w-auto active:scale-95">
+              <Search size={20} /> Explorar Tiendas
             </Link>
+            <section className="flex items-center gap-2">
+              <p className="text-gray-500 dark:text-zinc-400 font-medium">O también puedes </p>
+              <Link className="font-bold" href="/login">Iniciar sesión</Link>
+            </section>
           </div>
 
-          {/* Trust badges */}
-          <div className="mt-16 flex flex-wrap items-center justify-center gap-6 text-sm text-gray-400 font-bold">
-            <span className="flex items-center gap-2">✅ Sin costo de activación</span>
-            <span className="flex items-center gap-2">✅ Sin comisiones por venta</span>
-            <span className="flex items-center gap-2">✅ Autogestión total</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* LOGOS / STATS BAR */}
-      {/* ═══════════════════════════════════════════ */}
-      <section className="py-12 px-6 border-y border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { number: "150+", label: "Negocios activos" },
-            { number: "10K+", label: "Pedidos procesados" },
-            { number: "4", label: "Rubros adaptados" },
-            { number: "99.9%", label: "Uptime garantizado" },
-          ].map((stat, i) => (
-            <div key={i} className="group">
-              <p className="text-3xl sm:text-4xl font-black text-gray-900 group-hover:text-orange-600 transition-colors">{stat.number}</p>
-              <p className="text-sm text-gray-500 font-bold mt-1">{stat.label}</p>
+          <div className="mt-16 flex items-center justify-center gap-8 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
+            <div className="flex items-center gap-2 font-black text-sm text-gray-400 lowercase italic tracking-tighter">
+              <CheckCircle2 size={16} className="text-orange-500" /> 0% Comisiones
             </div>
-          ))}
+            <div className="flex items-center gap-2 font-black text-sm text-gray-400 lowercase italic tracking-tighter">
+              <CheckCircle2 size={16} className="text-orange-500" /> WhatsApp Directo
+            </div>
+            <div className="flex items-center gap-2 font-black text-sm text-gray-400 lowercase italic tracking-tighter">
+              <CheckCircle2 size={16} className="text-orange-500" /> Setup en 5min
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ═══════════════════════════════════════════ */}
-      {/* MÓDULOS / FEATURES GRID */}
+      {/* EXPLORE COMMUNITY: THE BRIDGE */}
       {/* ═══════════════════════════════════════════ */}
-      <section id="modulos" className="py-24 px-6">
+      <section className="py-24 px-6 bg-[#F8F9FF] dark:bg-zinc-900/40">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-sm font-black text-orange-600 uppercase tracking-[0.3em]">Soluciones por rubro</span>
-            <h2 className="text-4xl sm:text-5xl font-black text-gray-900 mt-4 tracking-tight">
-              Un sistema que se adapta
-              <br />
-              <span className="text-gray-400">a tu negocio</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Card 1: Gastronomía */}
-            <div className="group relative bg-white rounded-[2.5rem] p-8 sm:p-10 border border-gray-100 hover:border-orange-200 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700" />
-              <div className="relative">
-                <span className="text-5xl mb-6 block">🍔</span>
-                <h3 className="text-2xl font-black text-gray-900 mb-3">Gastronomía</h3>
-                <p className="text-gray-500 leading-relaxed font-medium mb-6">
-                  Menús interactivos con fotos, categorías, agregados personalizados (tipo de pan, salsas, extras) y pedidos rápidos directo al WhatsApp o al panel.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Menú Digital", "Agregados", "Pedidos Rápidos", "Delivery"].map(tag => (
-                    <span key={tag} className="px-3 py-1 bg-orange-50 text-orange-700 text-xs font-bold rounded-full">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Retail */}
-            <div className="group relative bg-white rounded-[2.5rem] p-8 sm:p-10 border border-gray-100 hover:border-blue-200 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700" />
-              <div className="relative">
-                <span className="text-5xl mb-6 block">👗</span>
-                <h3 className="text-2xl font-black text-gray-900 mb-3">Retail & Moda</h3>
-                <p className="text-gray-500 leading-relaxed font-medium mb-6">
-                  Catálogos visuales con galería de fotos, gestión de talles, variantes de color, control de stock en tiempo real y carrito de compras integrado.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Catálogo Visual", "Talles", "Colores", "Stock Real"].map(tag => (
-                    <span key={tag} className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Servicios */}
-            <div className="group relative bg-white rounded-[2.5rem] p-8 sm:p-10 border border-gray-100 hover:border-purple-200 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-2xl translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700" />
-              <div className="relative">
-                <span className="text-5xl mb-6 block">💇</span>
-                <h3 className="text-2xl font-black text-gray-900 mb-3">Servicios & Turnos</h3>
-                <p className="text-gray-500 leading-relaxed font-medium mb-6">
-                  Sistema ágil de reserva de turnos para estéticas, profesionales y consultorios. Agendá clientes sin mensajes de ida y vuelta. Todo automatizado.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Turnos Online", "Agenda Smart", "Recordatorios", "Auto-gestión"].map(tag => (
-                    <span key={tag} className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-bold rounded-full">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Construcción */}
-            <div className="group relative bg-white rounded-[2.5rem] p-8 sm:p-10 border border-gray-100 hover:border-emerald-200 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700" />
-              <div className="relative">
-                <span className="text-5xl mb-6 block">🪵</span>
-                <h3 className="text-2xl font-black text-gray-900 mb-3">Materiales & Madera</h3>
-                <p className="text-gray-500 leading-relaxed font-medium mb-6">
-                  Venta B2B y B2C con unidades complejas: metros, pies cuadrados, venta fraccionada por volumen. Logística para fletes pesados incluida.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {["Unidades Complejas", "B2B / B2C", "Fletes Pesados", "Volumen"].map(tag => (
-                    <span key={tag} className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* BENEFICIOS CLAVE */}
-      {/* ═══════════════════════════════════════════ */}
-      <section className="py-24 px-6 bg-gray-950 text-white relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-500/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[120px]" />
-        </div>
-
-        <div className="relative max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="text-sm font-black text-orange-500 uppercase tracking-[0.3em]">¿Por qué Clickcito?</span>
-            <h2 className="text-4xl sm:text-5xl font-black mt-4 tracking-tight">
-              Todo lo que necesitás,
-              <br />
-              <span className="text-gray-500">nada que no.</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: "🎛️",
-                title: "Autogestión Total",
-                description: "Manejá todo desde tu celular: productos, precios, estados de pedidos, horarios. Sin depender de nadie.",
-                gradient: "from-orange-600/20 to-orange-600/0",
-              },
-              {
-                icon: "💰",
-                title: "Sin Comisiones Abusivas",
-                description: "Tu ganancia es tuya. Sin porcentaje por venta, sin cargos ocultos. Pagás un plan fijo y transparente.",
-                gradient: "from-emerald-600/20 to-emerald-600/0",
-              },
-              {
-                icon: "🚚",
-                title: "Logística Adaptable",
-                description: "Delivery en moto, flete en camión, retiro en local. Cada rubro tiene su logística. Nosotros nos adaptamos.",
-                gradient: "from-blue-600/20 to-blue-600/0",
-              },
-            ].map((benefit, i) => (
-              <div
-                key={i}
-                className="group relative bg-white/5 backdrop-blur-sm rounded-[2.5rem] p-8 border border-white/10 hover:border-orange-500/30 transition-all duration-500"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-b ${benefit.gradient} rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                <div className="relative">
-                  <span className="text-4xl mb-6 block">{benefit.icon}</span>
-                  <h3 className="text-xl font-black mb-3">{benefit.title}</h3>
-                  <p className="text-gray-400 leading-relaxed font-medium">{benefit.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* SOCIAL PROOF — TOP ONE BURGERS */}
-      {/* ═══════════════════════════════════════════ */}
-      <section className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-950 rounded-[3rem] p-8 sm:p-14 overflow-hidden">
-            {/* Decorations */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/20 rounded-full blur-[100px]" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/10 rounded-full blur-[80px]" />
-
-            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <span className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-400 text-sm font-bold mb-8">
-                  ⭐ Caso de éxito
+          <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 rounded-[3rem] p-10 md:p-20 text-white shadow-2xl relative overflow-hidden group">
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-6 text-center lg:text-left">
+                <span className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-[0.2em] text-indigo-50 border border-white/20">
+                  <Sparkles size={12} className="text-yellow-300 fill-yellow-300" /> Ecosistema Clickcito
                 </span>
-                <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-6 leading-tight">
-                  &quot;Desde que usamos Clickcito, nuestros pedidos
-                  <span className="text-orange-500"> se triplicaron</span>&quot;
+                <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-none">
+                  Unite a la red de <br />
+                  <span className="text-yellow-300">negocios locales.</span>
                 </h2>
-                <p className="text-gray-400 text-lg leading-relaxed font-medium mb-8">
-                  Top One Burgers pasó de gestionar pedidos por WhatsApp a tener un menú interactivo con agregados personalizados, carrito inteligente y panel de administración en tiempo real.
+                <p className="text-indigo-50 font-medium text-lg leading-relaxed opacity-90 max-w-lg">
+                  No estás solo. Inspirate con otros catálogos, conectá con clientes reales y descubrí por qué cientos de negocios eligen Clickcito para crecer.
                 </p>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-600 flex items-center justify-center text-white font-black text-xl">
-                    T
-                  </div>
-                  <div>
-                    <p className="text-white font-black">Top One Burgers</p>
-                    <p className="text-gray-500 text-sm font-bold">San Vicente, Misiones</p>
+                <div className="pt-4 flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+                  <Link href="/explorar" className="flex items-center gap-3 px-8 py-4 bg-white text-indigo-600 font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl group/btn">
+                    Ver Comunidad <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <div className="flex items-center gap-3 p-1 px-4 bg-black/10 backdrop-blur-sm rounded-2xl border border-white/10">
+                    <div className="flex -space-x-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="w-8 h-8 rounded-full border-2 border-indigo-500 bg-indigo-100 flex items-center justify-center text-indigo-600"><Store size={14} /></div>
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-50">+150 Comercios</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white/5 backdrop-blur-sm rounded-[2rem] p-6 border border-white/10">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400 font-bold">Resultados en 3 meses</span>
-                    <span className="text-orange-500 font-black">📈 +300%</span>
-                  </div>
+              <div className="relative hidden lg:flex items-center justify-center">
+                <div className="absolute inset-0 bg-white/5 rounded-full blur-3xl animate-pulse" />
+                <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: "Pedidos mensuales", before: "~40", after: "120+", change: "+200%" },
-                    { label: "Tiempo por pedido", before: "8 min", after: "45 seg", change: "-90%" },
-                    { label: "Errores en pedidos", before: "15%", after: "~0%", change: "-100%" },
-                    { label: "Satisfacción cliente", before: "3.2★", after: "4.9★", change: "+53%" },
-                  ].map((metric, i) => (
-                    <div key={i} className="flex items-center justify-between py-3 border-t border-white/5">
-                      <div>
-                        <p className="text-white font-bold text-sm">{metric.label}</p>
-                        <p className="text-gray-500 text-xs font-medium">{metric.before} → {metric.after}</p>
-                      </div>
-                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-black rounded-full">
-                        {metric.change}
-                      </span>
+                    { icon: ShoppingBag, color: "bg-orange-500", label: "Menú" },
+                    { icon: MessageCircle, color: "bg-green-500", label: "💬" },
+                    { icon: Users, color: "bg-blue-500", label: "CRM" },
+                    { icon: Zap, color: "bg-yellow-500", label: "Live" },
+                  ].map((item, i) => (
+                    <div key={i} className={`p-8 ${item.color} rounded-[2rem] shadow-2xl flex items-center justify-center transform hover:scale-110 transition-transform duration-500 ${i % 2 !== 0 ? 'translate-y-8' : ''}`}>
+                      <item.icon size={40} className="text-white" />
                     </div>
                   ))}
                 </div>
@@ -287,36 +125,75 @@ export default function Home() {
       </section>
 
       {/* ═══════════════════════════════════════════ */}
-      {/* CTA FINAL */}
+      {/* CASE STUDY: SOCIAL PROOF */}
       {/* ═══════════════════════════════════════════ */}
-      <section className="py-24 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl sm:text-6xl font-black text-gray-900 tracking-tight mb-6">
-            ¿Listo para
-            <span className="bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent"> digitalizar</span> tu negocio?
+      <section className="py-24 px-6 bg-white dark:bg-[#0A0A0A]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-4">El éxito habla por sí solo.</h2>
+            <p className="text-gray-500 font-medium">Historias reales de emprendedores misioneros.</p>
+          </div>
+
+          <div className="bg-zinc-950 rounded-[3rem] p-8 md:p-14 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px]" />
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+              <div className="space-y-8">
+                <div className="w-20 h-20 bg-orange-600 rounded-3xl flex items-center justify-center text-white text-3xl font-black shadow-xl shrink-0">T</div>
+                <h3 className="text-4xl md:text-5xl font-black text-white leading-[0.9] italic tracking-tight">
+                  &quot;Pasamos de anotar en papeles a vender 3 veces más.&quot;
+                </h3>
+                <div className="space-y-1">
+                  <p className="text-white font-bold text-xl">Top One Burgers</p>
+                  <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">San Vicente, Misiones</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { label: "Ventas", value: "300%", sub: "Incremento" },
+                  { label: "Tiempo", value: "-90%", sub: "Ahorro" },
+                  { label: "Errores", value: "0%", sub: "Eliminados" },
+                  { label: "Feedback", value: "4.9★", sub: "Estrellas" },
+                ].map((stat, i) => (
+                  <div key={i} className="bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-[2rem] text-center hover:bg-white/10 transition-colors">
+                    <p className="text-3xl font-black text-orange-500 mb-1">{stat.value}</p>
+                    <p className="text-white font-bold text-sm mb-0.5">{stat.label}</p>
+                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{stat.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════ */}
+      {/* FINAL CALL TO ACTION */}
+      {/* ═══════════════════════════════════════════ */}
+      <section className="py-32 px-6 text-center">
+        <div className="max-w-4xl mx-auto space-y-10">
+          <h2 className="text-5xl sm:text-7xl font-black text-gray-900 dark:text-white tracking-tighter leading-none">
+            Dejá de usar planillas.<br />
+            <span className="text-orange-500">Empezá a crecer.</span>
           </h2>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10 font-medium">
-            Sumáte a los negocios que ya crecen con Clickcito. Configurá tu tienda en minutos, sin código, sin complicaciones.
+          <p className="text-xl text-gray-500 dark:text-zinc-400 font-medium max-w-xl mx-auto">
+            Unite a la red de negocios que ya están transformando su forma de vender. Sin contratos, sin letra chica.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login"
-              className="group relative w-full sm:w-auto"
-            >
-              <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-amber-500 rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition" />
-              <div className="relative flex items-center justify-center gap-3 px-12 py-5 bg-gradient-to-r from-orange-600 to-orange-500 text-white font-black text-lg rounded-2xl shadow-xl transition-transform group-hover:scale-[1.02]">
-                Registrar mi Negocio — Es Gratis
-              </div>
+            <Link href="/login" className="px-12 py-5 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-lg rounded-2xl hover:scale-105 transition-all shadow-xl active:scale-95 w-full sm:w-auto">
+              Registrar Negocio Gratis
             </Link>
-            <Link
-              href="#contacto"
-              className="w-full sm:w-auto px-10 py-5 text-gray-500 font-black text-lg hover:text-orange-600 transition-colors text-center"
-            >
-              Hablemos por WhatsApp →
+            <Link href="https://wa.me/543755223344" target="_blank" className="flex items-center gap-2 text-gray-500 hover:text-orange-600 font-black text-lg transition-colors py-4">
+              <MessageCircle size={24} className="text-green-500" /> Hablar con Soporte
             </Link>
           </div>
         </div>
       </section>
+
+      {/* Footer minimalista */}
+      <footer className="py-12 px-6 border-t border-gray-100 dark:border-zinc-900 text-center">
+        <p className="text-sm font-black text-gray-300 dark:text-zinc-800 tracking-[0.3em] uppercase">Clickcito © 2026 • San Vicente, Misiones</p>
+      </footer>
 
     </main>
   );

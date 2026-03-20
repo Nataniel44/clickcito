@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
 // Tipamos el objeto de configuración por buenas prácticas
 const firebaseConfig = {
@@ -23,4 +24,7 @@ const db = getFirestore(app);
 // Inicializamos Authentication
 const auth = getAuth(app);
 
-export { app, db, auth };
+// Inicializamos Storage
+const storage = getStorage(app);
+
+export { app, db, auth, storage };

@@ -20,6 +20,9 @@ interface CartContextType {
     removeFromCart: (cartItemId: string) => void;
     clearCart: () => void;
     cartTotal: number;
+    pendingItem: Omit<CartItem, "cartItemId"> | null;
+    setPendingItem: (item: Omit<CartItem, "cartItemId"> | null) => void;
+    confirmNewBusiness: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -27,26 +30,54 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [cartTotal, setCartTotal] = useState(0);
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [pendingItem, setPendingItem] = useState<Omit<CartItem, "cartItemId"> | null>(null);
 
-    // Cada vez que el carrito cambia, recalculamos el total
+    // Cargar carrito de localStorage cuando nace el componente
     useEffect(() => {
-        const total = cart.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
-        setCartTotal(total);
-    }, [cart]);
+        const savedCart = localStorage.getItem("clickcito_cart");
+        if (savedCart) {
+            try {
+                setCart(JSON.parse(savedCart));
+            } catch (e) {
+                console.error("Error al parsear el carrito guardado", e);
+            }
+        }
+        setIsInitialized(true);
+    }, []);
 
-    // Almacenamiento local temporal (si refresca la página, se pierde. Puede mejorarse con localStorage si se requiere luego)
+    // Guardar en localStorage cada vez que cambia
+    useEffect(() => {
+        if (isInitialized) {
+            localStorage.setItem("clickcito_cart", JSON.stringify(cart));
+            const total = cart.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
+            setCartTotal(total);
+        }
+    }, [cart, isInitialized]);
+
+    const generateId = () => {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    };
 
     const addToCart = (item: Omit<CartItem, "cartItemId">) => {
-        // Si intenta añadir algo de otro negocio, limpiamos el primer o bloqueamos.
-        // Para el MVP asumimos que solo navega en un negocio a la vez.
+        // Bloqueo de negocio diferente (Estilo PedidosYa)
         if (cart.length > 0 && cart[0].id_negocio !== item.id_negocio) {
-            toast.error("Tienes productos de otro negocio en el carrito. Vaciándolo primero...");
-            setCart([{ ...item, cartItemId: crypto.randomUUID() }]);
+            setPendingItem(item); // Activamos modal de conflicto
             return;
         }
 
-        setCart((prev) => [...prev, { ...item, cartItemId: crypto.randomUUID() }]);
-        toast.success(`${item.nombre_producto} agregado al carrito`);
+        setCart((prev) => [...prev, { ...item, cartItemId: generateId() }]);
+        toast.success(`¡${item.nombre_producto} agregado!`);
+    };
+
+    const confirmNewBusiness = () => {
+        if (!pendingItem) return;
+        setCart([{ ...pendingItem, cartItemId: generateId() }]);
+        setPendingItem(null);
+        toast.success("Carrito actualizado con el nuevo local");
     };
 
     const removeFromCart = (cartItemId: string) => {
@@ -58,7 +89,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, cartTotal }}>
+        <CartContext.Provider value={{
+            cart, addToCart, removeFromCart, clearCart, cartTotal,
+            pendingItem, setPendingItem, confirmNewBusiness
+        }}>
             {children}
         </CartContext.Provider>
     );

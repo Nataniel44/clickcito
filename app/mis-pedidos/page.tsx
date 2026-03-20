@@ -1,232 +1,317 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, limit, addDoc, serverTimestamp, updateDoc, doc } from "firebase/firestore";
 import { db } from "@/app/firebase/config";
 import {
     Clock, PackageCheck, Send, CheckCircle2,
-    ShoppingBag, Calendar, ArrowLeft, Package
+    ShoppingBag, ArrowLeft, Search, HelpCircle,
+    AlertCircle, ChevronRight, X, MessageSquare, SendHorizonal
 } from "lucide-react";
+
+// --- Tipos ---
+interface LineaPedido {
+    nombre_producto: string;
+    cantidad: number;
+    precio_unitario: number;
+}
+
+interface Orden {
+    id: string;
+    id_transaccion: string;
+    estado: string;
+    items: LineaPedido[];
+    createdAt: any;
+    reportado?: boolean;
+}
 
 export default function MisPedidosPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
-    const [ordenes, setOrdenes] = useState<any[]>([]);
+
+    // Estados
+    const [ordenes, setOrdenes] = useState<Orden[]>([]);
     const [loadingOrdenes, setLoadingOrdenes] = useState(true);
     const [activeFilter, setActiveFilter] = useState("todas");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [pageSize, setPageSize] = useState(5); // Paginación simple (Limite inicial)
 
-    // Protección: solo clientes logueados
+    // Estado para Reporte
+    const [reportModal, setReportModal] = useState<{ open: boolean, order: any }>({ open: false, order: null });
+    const [reportReason, setReportReason] = useState("");
+    const [sendingReport, setSendingReport] = useState(false);
+
     useEffect(() => {
-        if (!loading && !user) {
-            router.push("/login");
-        }
+        if (!loading && !user) router.push("/login");
     }, [user, loading, router]);
 
-    // Suscripción en tiempo real a las órdenes del cliente
     useEffect(() => {
         if (!user?.uid) return;
 
+        // Consultamos con un límite inicial para no tener una lista infinita pesada
         const q = query(
             collection(db, "transacciones"),
             where("id_usuario", "==", user.uid),
-            orderBy("createdAt", "desc")
+            orderBy("createdAt", "desc"),
+            limit(20) // Límite razonable para "no infinita"
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({
-                id_transaccion: doc.id,
+            setOrdenes(snapshot.docs.map(doc => ({
+                id: doc.id,
                 ...doc.data()
-            }));
-            setOrdenes(data);
-            setLoadingOrdenes(false);
-        }, (error) => {
-            console.error("Error cargando pedidos:", error);
+            } as Orden)));
             setLoadingOrdenes(false);
         });
-
         return () => unsubscribe();
     }, [user]);
 
-    const ordenesFiltradas = ordenes.filter(o =>
-        activeFilter === "todas" || o.estado === activeFilter
-    );
+    const filtered = useMemo(() => {
+        let items = ordenes.filter(o => {
+            const matchesFilter = activeFilter === "todas" || o.estado === activeFilter;
+            const matchesSearch = (o.id_transaccion || o.id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (o.items && o.items.some(i => i.nombre_producto?.toLowerCase().includes(searchTerm.toLowerCase())));
+            return matchesFilter && matchesSearch;
+        });
+        return items.slice(0, pageSize); // Aplicamos el recorte de UX (paginación visual)
+    }, [ordenes, activeFilter, searchTerm, pageSize]);
 
     const statusConfig: any = {
-        pendiente: { label: "Pendiente", color: "bg-amber-100 text-amber-800 dark:bg-amber-600/20 dark:text-amber-400", icon: <Clock size={16} />, step: 1 },
-        en_preparacion: { label: "En Preparación", color: "bg-blue-100 text-blue-800 dark:bg-blue-600/20 dark:text-blue-400", icon: <PackageCheck size={16} />, step: 2 },
-        en_camino: { label: "En Camino", color: "bg-purple-100 text-purple-800 dark:bg-purple-600/20 dark:text-purple-400", icon: <Send size={16} />, step: 3 },
-        entregado: { label: "Entregado", color: "bg-green-100 text-green-800 dark:bg-green-600/20 dark:text-green-400", icon: <CheckCircle2 size={16} />, step: 4 },
+        pendiente: { label: "Pendiente", color: "text-amber-500", bg: "bg-amber-50", icon: Clock },
+        en_preparacion: { label: "Preparando", color: "text-blue-500", bg: "bg-blue-50", icon: PackageCheck },
+        en_camino: { label: "En Camino", color: "text-purple-500", bg: "bg-purple-50", icon: Send },
+        entregado: { label: "Entregado", color: "text-emerald-500", bg: "bg-emerald-50", icon: CheckCircle2 },
+    };
+
+    const handleSendReport = async () => {
+        if (!reportReason.trim() || !reportModal.order) return;
+        setSendingReport(true);
+        try {
+            // Guardar reporte formal en Firebase
+            await addDoc(collection(db, "reportes_pedidos"), {
+                orderId: reportModal.order.id,
+                id_transaccion: reportModal.order.id_transaccion || reportModal.order.id,
+                userId: user?.uid,
+                userEmail: user?.email,
+                razon: reportReason,
+                timestamp: serverTimestamp(),
+                estado: "abierto"
+            });
+
+            // Marcar pedido como reportado para feedback visual
+            await updateDoc(doc(db, "transacciones", reportModal.order.id), {
+                reportado: true
+            });
+
+            setReportModal({ open: false, order: null });
+            setReportReason("");
+            alert("Reporte enviado con éxito. Nos pondremos en contacto pronto.");
+        } catch (error) {
+            console.error(error);
+            alert("Error al enviar el reporte.");
+        } finally {
+            setSendingReport(false);
+        }
     };
 
     if (loading || loadingOrdenes) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-zinc-950">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-                    <p className="text-gray-500 font-bold">Cargando tus pedidos...</p>
+            <div className="min-h-screen flex items-center justify-center bg-[#FDFDFD] dark:bg-[#0A0A0A]">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Recuperando historial...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] pt-24 pb-16 px-4 sm:px-8">
-            <div className="max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="mb-10">
-                    <button
-                        onClick={() => router.back()}
-                        className="flex items-center gap-2 text-gray-500 hover:text-orange-600 font-bold text-sm mb-6 transition-colors"
-                    >
-                        <ArrowLeft size={18} />
-                        Volver
-                    </button>
+        <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] pt-28 pb-20 px-4">
+            <div className="max-w-3xl mx-auto">
+
+                {/* Header Compacto */}
+                <div className="flex items-center justify-between mb-10">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-orange-600 rounded-2xl shadow-lg shadow-orange-600/20">
-                            <Package className="text-white" size={28} />
-                        </div>
+                        <button onClick={() => router.back()} className="p-2.5 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl hover:scale-105 transition-all shadow-sm">
+                            <ArrowLeft size={18} className="text-gray-900 dark:text-white" />
+                        </button>
                         <div>
-                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                                Mis Pedidos
-                            </h1>
-                            <p className="text-gray-500 dark:text-zinc-400 font-medium mt-1">
-                                {ordenes.length} {ordenes.length === 1 ? "pedido" : "pedidos"} en total
-                            </p>
+                            <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Mis <span className="text-orange-500">Pedidos.</span></h1>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">{ordenes.length} Transacciones totales</p>
                         </div>
                     </div>
                 </div>
 
-                {/* Filtros */}
-                <div className="flex p-1 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-sm overflow-x-auto no-scrollbar mb-8">
-                    {["todas", "pendiente", "en_preparacion", "en_camino", "entregado"].map((filter) => (
-                        <button
-                            key={filter}
-                            onClick={() => setActiveFilter(filter)}
-                            className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all whitespace-nowrap ${activeFilter === filter
-                                ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
-                                : "text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800"
-                                }`}
-                        >
-                            {filter === "todas" ? "Todos" : filter.replace("_", " ")}
-                        </button>
-                    ))}
+                {/* Controles: Filtros + Búsqueda */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-8">
+                    <div className="md:col-span-8 flex bg-white dark:bg-zinc-900 p-1 border border-gray-100 dark:border-zinc-800 rounded-xl overflow-x-auto no-scrollbar shadow-sm">
+                        {["todas", "pendiente", "en_preparacion", "en_camino", "entregado"].map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setActiveFilter(f)}
+                                className={`flex-1 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeFilter === f
+                                    ? "bg-gray-900 dark:bg-white text-white dark:text-black shadow-md"
+                                    : "text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                                    }`}
+                            >
+                                {f === "todas" ? "Todos" : f.replace("_", " ")}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="md:col-span-4 relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-orange-500 transition-colors" size={14} />
+                        <input
+                            type="text"
+                            placeholder="Buscar..."
+                            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl outline-none focus:border-orange-500/50 font-bold text-xs transition-all shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 {/* Lista de Pedidos */}
-                {ordenesFiltradas.length === 0 ? (
-                    <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-dashed border-gray-300 dark:border-zinc-800 p-16 text-center">
-                        <div className="w-20 h-20 bg-gray-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <ShoppingBag size={40} className="text-gray-300 dark:text-zinc-600" />
-                        </div>
-                        <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-                            {activeFilter === "todas" ? "Aún no tenés pedidos" : "Sin pedidos en este estado"}
-                        </h2>
-                        <p className="text-gray-500 dark:text-zinc-400 mt-2 text-lg">
-                            {activeFilter === "todas"
-                                ? "Cuando hagas tu primera compra, aparecerá aquí."
-                                : "Probá con otro filtro."}
-                        </p>
+                {filtered.length === 0 ? (
+                    <div className="text-center py-24 bg-white dark:bg-zinc-900 rounded-[2rem] border border-gray-100 dark:border-zinc-800 shadow-sm">
+                        <ShoppingBag size={48} className="mx-auto text-gray-100 dark:text-zinc-800 mb-6" />
+                        <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">No hay pedidos encontrados</p>
+                        <p className="text-[10px] text-gray-400 font-bold mt-2">Ajustá los filtros o intentá otra búsqueda.</p>
                     </div>
                 ) : (
-                    <div className="space-y-5">
-                        {ordenesFiltradas.map((orden) => {
-                            const status = statusConfig[orden.estado] || statusConfig.pendiente;
-                            const total = orden.items?.reduce((acc: number, item: any) => acc + (item.precio_unitario * item.cantidad), 0) || 0;
-                            const fecha = orden.createdAt?.seconds
-                                ? new Date(orden.createdAt.seconds * 1000)
-                                : null;
+                    <div className="space-y-4">
+                        {filtered.map((o) => {
+                            const status = statusConfig[o.estado] || statusConfig.pendiente;
+                            const total = o.items?.reduce((acc: number, i: any) => acc + (i.precio_unitario * i.cantidad), 0) || 0;
+                            const fecha = o.createdAt?.seconds ? new Date(o.createdAt.seconds * 1000) : null;
 
                             return (
-                                <div
-                                    key={orden.id_transaccion}
-                                    className="bg-white dark:bg-zinc-900 rounded-[2rem] p-6 border border-gray-100 dark:border-zinc-800 shadow-sm hover:shadow-lg transition-shadow"
-                                >
-                                    {/* Encabezado de la orden */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                                    Pedido #{orden.id_transaccion.slice(0, 8)}
-                                                </span>
+                                <div key={o.id} className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5 hover:border-gray-200 dark:hover:border-zinc-700 transition-all shadow-sm group">
+                                    <div className="flex justify-between items-start mb-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-12 h-12 ${status.bg} dark:bg-opacity-10 ${status.color} rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform`}>
+                                                <status.icon size={22} strokeWidth={2.5} />
                                             </div>
-                                            {fecha && (
-                                                <div className="flex items-center gap-1.5 text-sm text-gray-500 font-medium">
-                                                    <Calendar size={14} />
-                                                    {fecha.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}
-                                                    {" · "}
-                                                    {fecha.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <p className="text-xs font-black text-gray-900 dark:text-white tracking-widest uppercase">#{o.id_transaccion?.slice(-6) || o.id.slice(-6)}</p>
+                                                    {o.reportado && <span className="text-[9px] font-black bg-red-100 text-red-600 px-1.5 py-0.5 rounded-md uppercase">En Revisión</span>}
                                                 </div>
-                                            )}
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                                    {fecha ? fecha.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Recién'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider ${status.color}`}>
-                                            {status.icon}
+                                        <span className={`text-[9px] font-black uppercase px-3 py-1.5 rounded-xl border border-transparent shadow-sm ${status.bg} dark:bg-opacity-20 ${status.color}`}>
                                             {status.label}
-                                        </div>
+                                        </span>
                                     </div>
 
-                                    {/* Barra de progreso */}
-                                    <div className="flex items-center gap-1 mb-6">
-                                        {[1, 2, 3, 4].map((step) => (
-                                            <div
-                                                key={step}
-                                                className={`h-1.5 flex-1 rounded-full transition-all ${step <= status.step
-                                                        ? "bg-orange-500"
-                                                        : "bg-gray-200 dark:bg-zinc-800"
-                                                    }`}
-                                            />
-                                        ))}
-                                    </div>
-
-                                    {/* Items */}
-                                    <div className="bg-gray-50/50 dark:bg-zinc-800/30 rounded-2xl p-4 space-y-3 mb-4">
-                                        {orden.items?.map((item: any, i: number) => (
-                                            <div key={i} className="flex justify-between items-center text-sm">
+                                    {/* Items Preview */}
+                                    <div className="bg-gray-50/50 dark:bg-zinc-800/20 rounded-xl p-4 mb-5 space-y-2.5">
+                                        {o.items?.map((item: LineaPedido, i: number) => (
+                                            <div key={i} className="flex justify-between items-center text-[11px]">
                                                 <div className="flex items-center gap-3">
-                                                    <span className="flex items-center justify-center w-7 h-7 bg-orange-100 dark:bg-orange-600/20 text-orange-600 rounded-lg text-xs font-black">
-                                                        {item.cantidad}
-                                                    </span>
-                                                    <span className="font-bold text-gray-800 dark:text-zinc-200">
-                                                        {item.nombre_producto}
-                                                    </span>
+                                                    <span className="w-5 h-5 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-md font-black text-gray-400 border border-gray-100 dark:border-zinc-800 text-[9px]">{item.cantidad}</span>
+                                                    <span className="text-gray-700 dark:text-gray-300 font-bold tracking-tight">{item.nombre_producto}</span>
                                                 </div>
-                                                <span className="text-gray-500 font-black font-mono">
-                                                    ${(item.precio_unitario * item.cantidad).toLocaleString()}
-                                                </span>
+                                                <span className="font-black text-gray-900 dark:text-white">${(item.precio_unitario * (item.cantidad || 1)).toLocaleString()}</span>
                                             </div>
                                         ))}
                                     </div>
 
-                                    {/* Notas y dirección */}
-                                    {(orden.datos_logistica?.notas_cliente || orden.datos_logistica?.direccion_envio) && (
-                                        <div className="space-y-2 mb-4">
-                                            {orden.datos_logistica.direccion_envio && (
-                                                <p className="text-xs text-gray-500 flex items-center gap-1.5 font-medium">
-                                                    📍 {orden.datos_logistica.direccion_envio}
-                                                </p>
-                                            )}
-                                            {orden.datos_logistica.notas_cliente && (
-                                                <p className="text-xs text-orange-600 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-600/5 p-2 rounded-xl">
-                                                    💬 {orden.datos_logistica.notas_cliente}
-                                                </p>
-                                            )}
+                                    <div className="flex items-center justify-between pt-2">
+                                        <div>
+                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total a pagar</p>
+                                            <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">${total.toLocaleString()}</p>
                                         </div>
-                                    )}
-
-                                    {/* Total */}
-                                    <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-zinc-800">
-                                        <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Total</span>
-                                        <span className="text-2xl font-black text-gray-900 dark:text-white">
-                                            ${total.toLocaleString()}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setReportModal({ open: true, order: o })}
+                                                className="flex items-center gap-2 p-3 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
+                                                title="Reportar problema"
+                                            >
+                                                <AlertCircle size={18} />
+                                            </button>
+                                            <button className="flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl text-[10px] font-black uppercase tracking-widest transform transition-all active:scale-95 shadow-md hover:bg-orange-600 dark:hover:bg-orange-500">
+                                                Ver Detalle
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             );
                         })}
+
+                        {/* Pagination UX - Ver Más */}
+                        {ordenes.length > pageSize && (
+                            <button
+                                onClick={() => setPageSize(prev => prev + 5)}
+                                className="w-full py-4 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all shadow-sm flex items-center justify-center gap-2 group"
+                            >
+                                Cargar más pedidos <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        )}
                     </div>
                 )}
+
+                {/* Footer simple de soporte */}
+                <div className="mt-16 text-center">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800 rounded-full">
+                        <HelpCircle size={12} className="text-gray-400" />
+                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">¿Necesitás ayuda profesional?</span>
+                        <button onClick={() => window.open('https://wa.me/543755223344')} className="text-[9px] font-black text-orange-600 uppercase tracking-widest hover:underline ml-2">Contactar soporte</button>
+                    </div>
+                </div>
             </div>
+
+            {/* Modal de Reporte Profesional */}
+            {reportModal.open && (
+                <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setReportModal({ open: false, order: null })} />
+                    <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 shadow-2xl border border-gray-100 dark:border-zinc-800 animate-in fade-in zoom-in duration-300">
+                        <button
+                            onClick={() => setReportModal({ open: false, order: null })}
+                            className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="flex flex-col items-center text-center mb-8">
+                            <div className="w-16 h-16 bg-red-50 dark:bg-red-950/20 text-red-500 rounded-3xl flex items-center justify-center mb-4">
+                                <MessageSquare size={32} />
+                            </div>
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">Reportar Pedido</h2>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Transacción #{reportModal.order?.id_transaccion?.slice(-6) || reportModal.order?.id.slice(-6)}</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 block ml-1">Especifíca el problema</label>
+                                <textarea
+                                    className="w-full h-32 p-5 bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-2xl outline-none focus:border-red-500/50 font-bold text-xs resize-none transition-all"
+                                    placeholder="Ej: El pedido llegó incompleto, tardó demasiado, etc..."
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleSendReport}
+                                disabled={sendingReport || !reportReason.trim()}
+                                className="w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-[11px] uppercase tracking-[0.2em] rounded-2xl shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-3"
+                            >
+                                {sendingReport ? (
+                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <>Enviar Reporte Formal <SendHorizonal size={16} /></>
+                                )}
+                            </button>
+                            <p className="text-center text-[9px] text-gray-400 font-medium">Un representante de soporte revisará tu caso en breve.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

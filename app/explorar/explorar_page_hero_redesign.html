@@ -1,0 +1,58 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-sans); }
+  body { background: transparent; }
+  .hero { padding: 2.5rem 1.5rem 1.5rem; max-width: 860px; margin: auto; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: 999px; font-size: 12px; color: var(--color-text-secondary); padding: 4px 12px; margin-bottom: 1rem; }
+  .tag-dot { width: 7px; height: 7px; border-radius: 50%; background: #D85A30; display: inline-block; }
+  h1 { font-size: clamp(28px, 5vw, 46px); font-weight: 500; color: var(--color-text-primary); line-height: 1.15; margin-bottom: 0.6rem; }
+  h1 span { color: #D85A30; }
+  .sub { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.5rem; max-width: 440px; }
+  .search-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+  .search-wrap { flex: 1; position: relative; }
+  .search-wrap svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); opacity: 0.35; }
+  .search-wrap input { width: 100%; padding: 11px 14px 11px 40px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-lg); background: var(--color-background-primary); font-size: 14px; color: var(--color-text-primary); outline: none; }
+  .cta-btn { display: flex; align-items: center; gap: 8px; padding: 11px 20px; background: #D85A30; color: #fff; border: none; border-radius: var(--border-radius-lg); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
+  .chip { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border: 0.5px solid var(--color-border-tertiary); border-radius: 999px; font-size: 12px; color: var(--color-text-secondary); background: var(--color-background-primary); cursor: pointer; }
+  .chip.active { background: #D85A30; color: #fff; border-color: #D85A30; }
+  .stats-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .stat { display: flex; flex-direction: column; }
+  .stat-num { font-size: 20px; font-weight: 500; color: var(--color-text-primary); }
+  .stat-label { font-size: 11px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .divider { width: 0.5px; background: var(--color-border-tertiary); margin: 0 4px; }
+</style>
+
+<div class="hero">
+  <div class="tag"><span class="tag-dot"></span> Misiones, Argentina</div>
+  
+  <h1>Comprá en negocios<br><span>cerca tuyo.</span></h1>
+  <p class="sub">Buscá, elegí y pedí por WhatsApp — sin apps, sin comisiones.</p>
+
+  <div class="search-row">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input placeholder="¿Qué buscás? comida, ropa, talleres..." />
+    </div>
+    <button class="cta-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      En mi ciudad
+    </button>
+  </div>
+
+  <div class="chips">
+    <div class="chip active">Todo</div>
+    <div class="chip">🍽 Gastronomía</div>
+    <div class="chip">👕 Moda</div>
+    <div class="chip">✂️ Servicios</div>
+    <div class="chip">🔨 Materiales</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat"><span class="stat-num">120+</span><span class="stat-label">Negocios activos</span></div>
+    <div class="divider"></div>
+    <div class="stat"><span class="stat-num">Gratis</span><span class="stat-label">Sin comisiones</span></div>
+    <div class="divider"></div>
+    <div class="stat"><span class="stat-num">WhatsApp</span><span class="stat-label">Contacto directo</span></div>
+  </div>
+</div>

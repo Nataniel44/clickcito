@@ -3,14 +3,15 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "@/app/firebase/config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 // Tipo del usuario extendido con la info de la BD
 export interface UserProfile {
     uid: string;
     email: string | null;
     nombre?: string;
-    rol?: "cliente_final" | "dueño_negocio" | "admin_clickcito";
+    nombre_negocio?: string;
+    rol?: "cliente_final" | "dueño_negocio" | "admin_clickcito" | "admin";
     id_negocio?: string; // Sólo si es dueño
 }
 
@@ -29,34 +30,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
-                // Al detectar sesión en Auth, consultamos también la colección /usuarios de Firestore
-                try {
-                    const userDocRef = doc(db, "usuarios", firebaseUser.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-
-                    let dbData = {};
-                    if (userDocSnap.exists()) {
-                        dbData = userDocSnap.data();
+                const userDocRef = doc(db, "usuarios", firebaseUser.uid);
+                // Usamos onSnapshot para que el perfil de usuario sea en tiempo real (nombre, rol, id_negocio)
+                const unsubscribeDoc = onSnapshot(userDocRef, (snap) => {
+                    if (snap.exists()) {
+                        setUser({
+                            uid: firebaseUser.uid,
+                            email: firebaseUser.email,
+                            ...snap.data(),
+                        } as any);
+                    } else {
+                        setUser({
+                            uid: firebaseUser.uid,
+                            email: firebaseUser.email,
+                        } as any);
                     }
-
-                    setUser({
-                        uid: firebaseUser.uid,
-                        email: firebaseUser.email,
-                        ...dbData,
-                    });
-                } catch (error) {
-                    console.error("Error obteniendo los datos del usuario de Firestore:", error);
+                    setLoading(false);
+                }, (error) => {
+                    console.error("Error in user doc snapshot:", error);
                     setUser({ uid: firebaseUser.uid, email: firebaseUser.email });
-                }
+                    setLoading(false);
+                });
+
+                return () => unsubscribeDoc();
             } else {
                 setUser(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => unsubscribeAuth();
     }, []);
 
     return (

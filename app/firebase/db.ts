@@ -6,6 +6,7 @@ import {
     setDoc,
     updateDoc,
     deleteDoc,
+    writeBatch,
     query,
     where,
     addDoc,
@@ -43,6 +44,7 @@ export async function createNegocio(idNegocio: string, data: any) {
     await setDoc(docRef, {
         ...data,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     });
     return docRef.id;
 }
@@ -113,6 +115,20 @@ export async function getUserProfile(uid: string) {
     return docSnap.exists() ? docSnap.data() : null;
 }
 
+export async function getAllUsuariosByRol(rol: string) {
+    const q = query(collection(db, USUARIOS_COL), where("rol", "==", rol));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+export async function updateUsuario(uid: string, data: any) {
+    const userRef = doc(db, USUARIOS_COL, uid);
+    await updateDoc(userRef, {
+        ...data,
+        updatedAt: serverTimestamp()
+    });
+}
+
 // ============================================
 // SERVICIOS: TRANSACCIONES (MULTI-TENANT)
 // ============================================
@@ -156,4 +172,41 @@ export async function updateEstadoTransaccion(idTransaccion: string, nuevoEstado
         estado: nuevoEstado,
         updatedAt: serverTimestamp()
     });
+}
+
+export async function deleteTransaccion(idTransaccion: string) {
+    const docRef = doc(db, TRANSACCIONES_COL, idTransaccion);
+    await deleteDoc(docRef);
+}
+
+export async function deleteTransaccionesBatch(ids: string[]) {
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+        batch.delete(doc(db, TRANSACCIONES_COL, id));
+    });
+    await batch.commit();
+}
+
+// ============================================
+// SERVICIOS: LOGS DE ACTIVIDAD
+// ============================================
+const LOGS_COL = "actividad_logs";
+
+export async function createActivityLog(idNegocio: string, data: {
+    usuario_email: string;
+    accion: string;
+    detalles: string;
+}) {
+    const logsRef = collection(db, LOGS_COL);
+    await addDoc(logsRef, {
+        ...data,
+        id_negocio: idNegocio,
+        createdAt: serverTimestamp(),
+    });
+}
+
+export async function getActivityLogs(idNegocio: string) {
+    const q = query(collection(db, LOGS_COL), where("id_negocio", "==", idNegocio));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }

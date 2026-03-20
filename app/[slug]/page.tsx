@@ -1,15 +1,30 @@
-import { getRestaurantBySlug } from '@/lib/wordpress';
+import { getRestaurantBySlug, getAllRestaurants } from '@/lib/wordpress';
 import { notFound } from 'next/navigation';
 import { RestaurantMenu } from '@/components/RestaurantMenu';
 import Image from 'next/image';
-import { Phone, MapPin, MessageCircle } from 'lucide-react';
+import { Phone, MapPin } from 'lucide-react';
 import { CartProvider } from '@/context/CartContext';
 import { CartSidebar } from '@/components/CartSidebar';
 import { FloatingCartButton } from '@/components/FloatingCartButton';
 import { Toaster } from 'react-hot-toast';
 
-export default async function RestaurantPage({ params }: { params: Promise<{ slug: string }> }) {
-    const { slug } = await params;
+export async function generateStaticParams() {
+    try {
+        const restaurants = await getAllRestaurants();
+        return restaurants.map((r) => ({
+            slug: r.slug,
+        }));
+    } catch (error) {
+        console.error("Error generating static params for restaurants:", error);
+        return [{ slug: 'elysrestobar' }];
+    }
+}
+
+export default async function RestaurantPage(props: {
+    params: Promise<{ slug: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+    const { slug } = await props.params;
     const restaurant = await getRestaurantBySlug(slug);
 
     if (!restaurant) {

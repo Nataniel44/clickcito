@@ -6,6 +6,10 @@ import { OrderTrackerProvider } from "@/components/contexts/OrderTrackerContext"
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { Suspense } from "react";
+import PageTransitions from "./PageTransitions";
+
+import CartConflictModal from "./components/CartConflictModal";
 
 export default function RootLayout({ children }) {
   return (
@@ -13,15 +17,21 @@ export default function RootLayout({ children }) {
       <link rel="icon" href="./c.png" type="image/x-icon" />
 
       <body
-        className={`dark:bg-white max-w-screen-2xl mx-auto`}
+        className={`dark:bg-white max-w-screen mx-auto`}
       >
 
 
         <AuthProvider>
           <Navbar />
           <CartProvider>
+            <CartConflictModal />
             <OrderTrackerProvider >
-              {children}     <Toaster position="top-center" />
+              <Suspense fallback={null}>
+                <PageTransitions>
+                  {children}
+                </PageTransitions>
+              </Suspense>
+              <Toaster position="top-center" />
             </OrderTrackerProvider>
           </CartProvider>
           <Footer />

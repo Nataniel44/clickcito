@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export default function ProductList({ restaurantId }: { restaurantId: number }) {
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const loadProducts = async () => {
+    const loadProducts = useCallback(async () => {
         try {
             const res = await fetch(`/api/admin/restaurants/${restaurantId}/products`);
             if (!res.ok) throw new Error("Error al obtener productos");
@@ -17,7 +17,7 @@ export default function ProductList({ restaurantId }: { restaurantId: number }) 
         } finally {
             setLoading(false);
         }
-    };
+    }, [restaurantId]);
 
     const deleteProduct = async (productId: number) => {
         if (!confirm("¿Seguro que querés eliminar este producto?")) return;
@@ -36,7 +36,7 @@ export default function ProductList({ restaurantId }: { restaurantId: number }) 
 
     useEffect(() => {
         loadProducts();
-    }, []);
+    }, [loadProducts]);
 
     if (loading) return <p>Cargando productos...</p>;
     if (error) return <p className="text-red-600">{error}</p>;
