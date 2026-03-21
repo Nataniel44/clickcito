@@ -98,7 +98,7 @@ export default async function RestaurantPage(props: {
                             {/* Category Navigation (Sticky) */}
                             {restaurant.menu_categories && restaurant.menu_categories.length > 0 && (
                                 <div className="w-full sticky top-0 z-30 pt-4 pb-4 -mx-4 px-4 backdrop-blur-md bg-white/90 border-b border-gray-100/50">
-                                    <div className="flex justify-center gap-3 overflow-x-auto no-scrollbar py-1 max-w-4xl mx-auto">
+                                    <div className="flex justify-center gap-3 overflow-x-auto custom-scrollbar py-1 max-w-4xl mx-auto">
                                         {restaurant.menu_categories.map((cat, idx) => (
                                             <a
                                                 key={idx}

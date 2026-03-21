@@ -62,10 +62,11 @@ function resolveUnit(detalles: any): UnitInfo {
     return { unitLabel: 'u', unitLabelLong: 'unidad', priceLabel: '', qtyLabel: (n) => `${n}`, step: 1, isFractional: false };
 }
 
-function ProductCard({ prod, onAdd, accent, isAdded }: { prod: any; onAdd: (qty: number) => void; accent: string; isAdded?: boolean }) {
+function ProductCard({ prod, onAdd, accent, isAdded, fallbackEmoji }: { prod: any; onAdd: (qty: number) => void; accent: string; isAdded?: boolean; fallbackEmoji?: string }) {
     const unitInfo = useMemo(() => resolveUnit(prod.detalles_especificos), [prod.detalles_especificos]);
     const [qty, setQty] = useState(unitInfo.step);
     const [animating, setAnimating] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
     const handleAdd = () => {
         onAdd(qty);
@@ -85,10 +86,17 @@ function ProductCard({ prod, onAdd, accent, isAdded }: { prod: any; onAdd: (qty:
 
             {/* Imagen con Aspect Ratio controlado */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gray-50 dark:bg-zinc-800 flex items-center justify-center text-2xl shrink-0 relative overflow-hidden border border-gray-100 dark:border-zinc-800/60 shadow-sm">
-                {prod.imagen_url ? (
-                    <Image src={prod.imagen_url} alt={prod.nombre_producto || "Producto"} fill className="object-cover group-hover:scale-110 transition-transform duration-500" unoptimized />
+                {prod.imagen_url && !imageError ? (
+                    <Image
+                        src={prod.imagen_url}
+                        alt={prod.nombre_producto || "Producto"}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        unoptimized
+                        onError={() => setImageError(true)}
+                    />
                 ) : (
-                    <span className="text-2xl opacity-70">🍽️</span>
+                    <span className="text-2xl opacity-70">{fallbackEmoji || "�"}</span>
                 )}
             </div>
 
@@ -162,6 +170,27 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+
+    // ScrollSpy States
+    const [activeCategory, setActiveCategory] = useState<string>("");
+    const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const categoryNavRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (categoryNavRef.current && activeCategory) {
+            const doc = categoryNavRef.current;
+            const activeItem = Array.from(doc.children).find(
+                (c) => c.textContent === activeCategory
+            ) as HTMLElement;
+            if (activeItem) {
+                doc.scrollTo({
+                    left: activeItem.offsetLeft - doc.clientWidth / 2 + activeItem.clientWidth / 2,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, [activeCategory]);
+
     const lastScrollY = useRef(0);
     const { addToCart, cart } = useCart();
     const headerRef = useRef<HTMLDivElement>(null);
@@ -230,12 +259,60 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const productosPorTipo = useMemo(() => {
         const grupos: Record<string, any[]> = {};
         productos.forEach(p => {
-            const tipo = p.detalles_especificos?.tipo || "general";
+            const tipo = p.categoria_producto || p.categorias?.[0] || p.detalles_especificos?.tipo || "General";
             if (!grupos[tipo]) grupos[tipo] = [];
             grupos[tipo].push(p);
         });
         return grupos;
     }, [productos]);
+
+    useEffect(() => {
+        const categories = Object.keys(productosPorTipo);
+        if (categories.length > 0 && !activeCategory) {
+            setActiveCategory(categories[0]);
+        }
+    }, [productosPorTipo, activeCategory]);
+
+    const isAutoScrolling = useRef(false);
+
+    useEffect(() => {
+        if (Object.keys(categoryRefs.current).length === 0) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (isAutoScrolling.current) return;
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setActiveCategory(entry.target.id);
+                    }
+                });
+            },
+            { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
+        );
+
+        Object.values(categoryRefs.current).forEach((ref) => {
+            if (ref) observer.observe(ref);
+        });
+
+        return () => observer.disconnect();
+    }, [productosPorTipo]);
+
+    const scrollToCategory = (tipo: string) => {
+        const element = categoryRefs.current[tipo];
+        if (element) {
+            isAutoScrolling.current = true;
+            setActiveCategory(tipo);
+            const currentY = window.scrollY;
+            const targetY = element.getBoundingClientRect().top + currentY;
+            const isScrollingUp = targetY < currentY;
+            const offset = isScrollingUp ? 139 : 64;
+            window.scrollTo({ top: targetY - offset, behavior: 'smooth' });
+
+            setTimeout(() => {
+                isAutoScrolling.current = false;
+            }, 800);
+        }
+    };
 
     const handleAddProduct = useCallback((prod: any, qty: number) => {
         addToCart({
@@ -450,7 +527,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
                             <p className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Galería</p>
                             <span className="text-[9px] font-bold text-gray-400">{negocio.fotos.length} fotos</span>
                         </div>
-                        <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
+                        <div className="flex gap-2.5 overflow-x-auto custom-scrollbar">
                             {negocio.fotos.map((src: string, i: number) => (
                                 <div
                                     key={i}
@@ -480,9 +557,34 @@ export default function NegocioClient({ slug }: { slug: string }) {
 
                 {/* Products */}
                 {productos.length > 0 ? (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 relative">
+                        {/* ── Sticky Category Navigation ── */}
+                        {Object.keys(productosPorTipo).length > 1 && (
+                            <div className={`sticky z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md pt-3 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 dark:border-zinc-800/50 mb-2 rounded-b-xl transition-all duration-300 ease-in-out ${isNavbarVisible ? "top-[139px]" : "top-[64px]"}`}>
+                                <div ref={categoryNavRef} className="flex gap-2 overflow-x-auto custom-scrollbar scroll-smooth snap-x">
+                                    {Object.keys(productosPorTipo).map((tipo) => (
+                                        <button
+                                            key={tipo}
+                                            onClick={() => scrollToCategory(tipo)}
+                                            className={`snap-center shrink-0 px-4 py-1.5 rounded-full text-[13px] font-bold transition-all border ${activeCategory === tipo
+                                                ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white shadow-md'
+                                                : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-900 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-800'
+                                                }`}
+                                        >
+                                            {tipo}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {Object.entries(productosPorTipo).map(([tipo, prods]) => (
-                            <div key={tipo}>
+                            <div
+                                key={tipo}
+                                id={tipo}
+                                ref={(el) => { categoryRefs.current[tipo] = el; }}
+                                className="scroll-mt-32 pb-4"
+                            >
                                 {Object.keys(productosPorTipo).length > 1 && (
                                     <div className="flex items-center gap-2 mb-3 px-1 mt-4">
                                         <h3 className="text-[15px] font-black text-gray-900 dark:text-white capitalize tracking-tight">{tipo}</h3>
@@ -495,6 +597,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
                                             key={prod.id_producto}
                                             prod={prod}
                                             accent={accent}
+                                            fallbackEmoji={emoji}
                                             onAdd={(qty) => handleAddProduct(prod, qty)}
                                             isAdded={cart.some(c => c.id_producto === prod.id_producto)}
                                         />

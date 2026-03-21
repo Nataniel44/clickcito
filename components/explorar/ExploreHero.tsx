@@ -26,10 +26,6 @@ export function ExploreHero({ searchTerm, setSearchTerm, activeRubro, setActiveR
                 Comprá en negocios<br className="sm:hidden" /><span className="text-orange-600"> cerca tuyo.</span>
             </h1>
 
-            <p className="text-[14px] md:text-base text-gray-500 dark:text-gray-400 mb-6 md:mb-8 max-w-lg text-center leading-relaxed">
-                Buscá, elegí y pedí por WhatsApp — sin apps, sin comisiones.
-            </p>
-
             {/* Fila de Búsqueda */}
             <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mb-6 md:mb-8 w-full max-w-2xl px-2 sm:px-0">
                 <div className="relative flex-1 group">

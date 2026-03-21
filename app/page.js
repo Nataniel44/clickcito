@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Zap
 } from "lucide-react";
+import Footer from "./components/Footer";
 
 export default function Home() {
   return (
@@ -190,10 +191,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer minimalista */}
-      <footer className="py-12 px-6 border-t border-gray-100 dark:border-zinc-900 text-center">
-        <p className="text-sm font-black text-gray-300 dark:text-zinc-800 tracking-[0.3em] uppercase">Clickcito © 2026 • San Vicente, Misiones</p>
-      </footer>
 
     </main>
   );

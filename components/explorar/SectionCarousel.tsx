@@ -83,9 +83,9 @@ export function SectionCarousel({ title, icon: Icon, negocios, subtitle }: Secti
             </div>
 
             <div className="relative">
-                {/* Fade Indicators for Mobile/Touch */}
-                <div className={`absolute left-0 top-0 bottom-6 w-12 bg-gradient-to-r from-[#FDFDFD] dark:from-[#060606] to-transparent z-10 pointer-events-none sm:hidden transition-opacity duration-300 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`} />
-                <div className={`absolute right-0 top-0 bottom-6 w-12 bg-gradient-to-l from-[#FDFDFD] dark:from-[#060606] to-transparent z-10 pointer-events-none sm:hidden transition-opacity duration-300 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`} />
+                {/* Fade Indicators for Mobile/Touch - ensuring they touch the screen edges despite section padding */}
+                <div className={`absolute -left-6 top-0 bottom-6 w-20 bg-gradient-to-r from-[#FDFDFD] dark:from-[#060606] via-[#FDFDFD]/80 dark:via-[#060606]/80 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${canScrollLeft ? 'opacity-100' : 'opacity-0'}`} />
+                <div className={`absolute -right-6 top-0 bottom-6 w-20 bg-gradient-to-l from-[#FDFDFD] dark:from-[#060606] via-[#FDFDFD]/80 dark:via-[#060606]/80 to-transparent z-10 pointer-events-none transition-opacity duration-300 ${canScrollRight ? 'opacity-100' : 'opacity-0'}`} />
 
                 <div
                     ref={scrollRef}
