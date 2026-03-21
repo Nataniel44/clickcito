@@ -63,6 +63,14 @@ export default function DashboardPage() {
         }
     }, [user, loading, router]);
 
+    // ═══════ AUTO-CLEAR MANAGED BUSINESS ═══════
+    useEffect(() => {
+        if (activeTab !== "productos" && managedBusinessId) {
+            setManagedBusinessId(null);
+            setManagedBusinessData(null);
+        }
+    }, [activeTab, managedBusinessId]);
+
     // ═══════ LIVE ORDERS ═══════
     useEffect(() => {
         if (!user) { setLoadingOrdenes(false); return; }
