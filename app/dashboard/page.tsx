@@ -50,6 +50,8 @@ export default function DashboardPage() {
     const [adminDueños, setAdminDueños] = useState<any[]>([]);
     const [adminNegocios, setAdminNegocios] = useState<any[]>([]);
     const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+    const [managedBusinessId, setManagedBusinessId] = useState<string | null>(null);
+    const [managedBusinessData, setManagedBusinessData] = useState<any | null>(null);
     const isInitialLoad = useRef(true);
 
     // ═══════ AUTH GUARD ═══════
@@ -67,13 +69,10 @@ export default function DashboardPage() {
 
         const isAdmin = user.rol === "admin_clickcito" || user.rol === "admin";
 
-        if (!isAdmin && !user.id_negocio) {
-            setLoadingOrdenes(false);
-            return;
-        }
+        const idToUse = managedBusinessId || user?.id_negocio;
 
-        const q = (user.rol === "dueño_negocio" && user.id_negocio)
-            ? query(collection(db, "transacciones"), where("id_negocio", "==", user.id_negocio), orderBy("createdAt", "desc"))
+        const q = (user.rol === "dueño_negocio" || managedBusinessId) && idToUse
+            ? query(collection(db, "transacciones"), where("id_negocio", "==", idToUse), orderBy("createdAt", "desc"))
             : query(collection(db, "transacciones"), orderBy("createdAt", "desc"));
 
         const unsub = onSnapshot(q, (snap) => {
@@ -105,36 +104,44 @@ export default function DashboardPage() {
             isInitialLoad.current = false;
         }, () => { setLoadingOrdenes(false); });
         return () => unsub();
-    }, [user]);
+    }, [user, managedBusinessId]);
 
     // ═══════ PRODUCTS LIVE ═══════
     useEffect(() => {
-        if (!user?.id_negocio) { setLoadingProductos(false); return; }
+        const idToUse = managedBusinessId || user?.id_negocio;
+        if (!idToUse) {
+            setProductos([]);
+            setLoadingProductos(false);
+            return;
+        }
 
-        const q = query(collection(db, "productos_catalogo"), where("id_negocio", "==", user.id_negocio));
+        setLoadingProductos(true);
+        const q = query(collection(db, "productos_catalogo"), where("id_negocio", "==", idToUse));
         const unsub = onSnapshot(q, (snap) => {
             setProductos(snap.docs.map(d => ({ id_producto: d.id, ...d.data() })));
             setLoadingProductos(false);
         }, () => setLoadingProductos(false));
 
         return () => unsub();
-    }, [user]);
+    }, [user, managedBusinessId]);
 
     // ═══════ BUSINESS DATA LIVE (BANNER/CONFIG) ═══════
     useEffect(() => {
-        if (!user?.id_negocio) return;
+        const idToUse = managedBusinessId || user?.id_negocio;
+        if (!idToUse) return;
+        setNegocioData(null); // Reset when changing
 
-        const docRef = doc(db, "negocios", user.id_negocio);
+        const docRef = doc(db, "negocios", idToUse);
         const unsub = onSnapshot(docRef, (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
-                setNegocioData(data); // <--- Save full document locally
+                setNegocioData({ id: snap.id, ...data }); // Always include the document ID (slug)
                 if (data.anuncio_banner !== undefined) setBannerText(data.anuncio_banner || "");
             }
         });
 
         return () => unsub();
-    }, [user]);
+    }, [user, managedBusinessId]);
 
     // ═══════ ADMIN DATA FETCHING ═══════
     useEffect(() => {
@@ -604,7 +611,8 @@ export default function DashboardPage() {
                 handleDeleteProducto={handleDeleteProducto}
                 router={router}
                 user={user}
-                negocioData={negocioData}
+                negocioData={managedBusinessData || negocioData}
+                onStopManaging={managedBusinessId ? () => { setManagedBusinessId(null); setManagedBusinessData(null); } : undefined}
             />
         ),
         clientes: () => (
@@ -662,6 +670,11 @@ export default function DashboardPage() {
                 handleCrearNegocioParaUsuario={handleCrearNegocioParaUsuario}
                 handleQuitarNegocio={handleQuitarNegocio}
                 handleAsignarNegocioExistente={handleAsignarNegocioExistente}
+                handleManageProducts={(n) => {
+                    setManagedBusinessId(n.id);
+                    setManagedBusinessData(n);
+                    setActiveTab("productos");
+                }}
                 router={router}
                 onRefresh={refreshAdminData}
             />

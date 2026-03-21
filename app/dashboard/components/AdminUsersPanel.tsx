@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Users, Plus, ExternalLink, Megaphone, Edit } from "lucide-react";
+import { Users, Plus, ExternalLink, Megaphone, Edit, Package } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 import { BusinessEditorModal } from "./BusinessEditorModal";
 
@@ -12,6 +12,7 @@ export function AdminUsersPanel({
     handleCrearNegocioParaUsuario,
     handleQuitarNegocio,
     handleAsignarNegocioExistente,
+    handleManageProducts,
     router,
     onRefresh
 }: {
@@ -21,6 +22,7 @@ export function AdminUsersPanel({
     handleCrearNegocioParaUsuario: (d: any) => void;
     handleQuitarNegocio: (d: any) => void;
     handleAsignarNegocioExistente: (owner: any, idNegocio: string) => void;
+    handleManageProducts: (n: any) => void;
     router: any;
     onRefresh?: () => void;
 }) {
@@ -88,8 +90,11 @@ export function AdminUsersPanel({
                                                 )}
                                                 {dueño.id_negocio && (
                                                     <>
-                                                        <button onClick={() => setSelectedNegocio(negocioAsociado)} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-all" title="Editar Negocio">
+                                                        <button onClick={() => setSelectedNegocio(negocioAsociado)} className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-xl transition-all" title="Editar Datos del Negocio">
                                                             <Edit size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleManageProducts(negocioAsociado)} className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl transition-all" title="Gestionar Productos">
+                                                            <Package size={16} />
                                                         </button>
                                                         <button onClick={() => router.push(`/negocio/${dueño.id_negocio}`)} className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl transition-all" title="Ver catálogo">
                                                             <ExternalLink size={16} />

@@ -77,7 +77,9 @@ export function ProductModal({
             return;
         }
 
-        if (!user?.id_negocio) {
+        const targetNegocioId = negocioData?.id || user?.id_negocio;
+
+        if (!targetNegocioId) {
             toast.error("Error: No se encontró el negocio");
             return;
         }
@@ -100,14 +102,14 @@ export function ProductModal({
                 await updateProducto(productoParaEditar.id_producto, data);
                 toast.success("Producto actualizado con éxito");
             } else {
-                await createProducto(user.id_negocio, data);
+                await createProducto(targetNegocioId, data);
                 toast.success("Producto agregado con éxito");
             }
 
             // Guardar o actualizar la categoría a nivel del Negocio si es nueva
             if (formData.tipo && !categoriasNativas.includes(formData.tipo)) {
                 try {
-                    const negRef = doc(db, "negocios", user.id_negocio);
+                    const negRef = doc(db, "negocios", targetNegocioId);
                     await updateDoc(negRef, {
                         categorias: arrayUnion(formData.tipo)
                     });
