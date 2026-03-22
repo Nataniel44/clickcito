@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { collection, query, where, onSnapshot, orderBy, limit, addDoc, serverTimestamp, updateDoc, doc } from "firebase/firestore";
@@ -47,6 +47,8 @@ export default function MisPedidosPage() {
         if (!loading && !user) router.push("/login");
     }, [user, loading, router]);
 
+    const [selectedOrder, setSelectedOrder] = useState<any>(null);
+
     useEffect(() => {
         if (!user?.uid) return;
 
@@ -83,7 +85,42 @@ export default function MisPedidosPage() {
         en_preparacion: { label: "Preparando", color: "text-blue-500", bg: "bg-blue-50", icon: PackageCheck },
         en_camino: { label: "En Camino", color: "text-purple-500", bg: "bg-purple-50", icon: Send },
         entregado: { label: "Entregado", color: "text-emerald-500", bg: "bg-emerald-50", icon: CheckCircle2 },
+        cancelado: { label: "Cancelado", color: "text-red-500", bg: "bg-red-50", icon: X },
     };
+
+    // --- Toasts Personalizados de Actualización ---
+    const prevOrdenesRef = useRef<Orden[]>([]);
+    const [toasts, setToasts] = useState<{ id: number, orderIdCorto: string, newStatus: string, sc: any }[]>([]);
+
+    useEffect(() => {
+        if (ordenes.length === 0) return;
+        if (prevOrdenesRef.current.length > 0) {
+            ordenes.forEach(o => {
+                const prev = prevOrdenesRef.current.find(po => po.id === o.id);
+                // Si el estado cambió a uno progresivo o nuevo
+                if (prev && prev.estado !== o.estado) {
+                    const sc = statusConfig[o.estado] || statusConfig.pendiente;
+                    const idCorto = o.id_transaccion?.slice(-6) || o.id.slice(-6);
+                    const toastId = Date.now() + Math.random();
+
+                    setToasts(prevToasts => [...prevToasts, {
+                        id: toastId,
+                        orderIdCorto: idCorto,
+                        newStatus: sc.label,
+                        sc: sc
+                    }]);
+
+                    // Auto-borrar después de 6 segundos
+                    setTimeout(() => {
+                        setToasts(prevToasts => prevToasts.filter(t => t.id !== toastId));
+                    }, 6000);
+                }
+            });
+        }
+        prevOrdenesRef.current = ordenes;
+    }, [ordenes]);
+
+    const removeToast = (id: number) => setToasts(prev => prev.filter(t => t.id !== id));
 
     const handleSendReport = async () => {
         if (!reportReason.trim() || !reportModal.order) return;
@@ -234,7 +271,7 @@ export default function MisPedidosPage() {
                                             >
                                                 <AlertCircle size={18} />
                                             </button>
-                                            <button className="flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl text-[10px] font-black uppercase tracking-widest transform transition-all active:scale-95 shadow-md hover:bg-orange-600 dark:hover:bg-orange-500">
+                                            <button onClick={() => setSelectedOrder(o)} className="flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl text-[10px] font-black uppercase tracking-widest transform transition-all active:scale-95 shadow-md hover:bg-orange-600 dark:hover:bg-orange-500">
                                                 Ver Detalle
                                             </button>
                                         </div>
@@ -312,6 +349,81 @@ export default function MisPedidosPage() {
                     </div>
                 </div>
             )}
+            {/* Modal de Detalle de Pedido (Solo lectura para usuario final) */}
+            {selectedOrder && (
+                <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedOrder(null)} />
+                    <div className="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 shadow-2xl border border-gray-100 dark:border-zinc-800 animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto no-scrollbar">
+                        <button
+                            onClick={() => setSelectedOrder(null)}
+                            className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Detalle de Pedido</h2>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Transacción #{selectedOrder.id_transaccion?.slice(-6) || selectedOrder.id.slice(-6)}</p>
+                            <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase mt-3 ${(statusConfig[selectedOrder.estado] || statusConfig.pendiente).color} ${(statusConfig[selectedOrder.estado] || statusConfig.pendiente).bg} dark:bg-opacity-20`}>
+                                {(statusConfig[selectedOrder.estado] || statusConfig.pendiente).label}
+                            </span>
+                        </div>
+
+                        <div className="space-y-4 mb-6">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resumen de Items</h4>
+                            <div className="bg-gray-50/50 dark:bg-zinc-800/20 rounded-2xl p-4 space-y-3">
+                                {selectedOrder.items?.map((item: any, i: number) => (
+                                    <div key={i} className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center gap-3">
+                                            <span className="w-6 h-6 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-lg font-black text-gray-400 border border-gray-100 dark:border-zinc-800 text-[10px]">{item.cantidad || 1}</span>
+                                            <span className="text-gray-900 dark:text-gray-100 font-bold">{item.nombre_producto}</span>
+                                        </div>
+                                        <span className="font-black text-gray-900 dark:text-white">${((item.precio_unitario || 0) * (item.cantidad || 1)).toLocaleString()}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex justify-between items-center px-2">
+                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Total</span>
+                                <span className="text-xl font-black text-gray-900 dark:text-white">${(selectedOrder.items?.reduce((a: number, i: any) => a + (i.precio_unitario || 0) * (i.cantidad || 1), 0) || 0).toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        {Object.keys(selectedOrder.datos_logistica || {}).length > 0 && (
+                            <div className="space-y-4 mb-6">
+                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Información Adicional</h4>
+                                <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-2xl p-4 grid grid-cols-2 gap-4">
+                                    {Object.entries(selectedOrder.datos_logistica || {}).map(([k, v]) => (
+                                        <div key={k}>
+                                            <p className="text-[9px] font-black text-gray-400 uppercase">{k.replace(/_/g, " ")}</p>
+                                            <p className="font-bold text-xs text-gray-900 dark:text-white line-clamp-2">{String(v)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+            {/* Contenedor de Toasts Flotantes */}
+            <div className="fixed top-24 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
+                {toasts.map(t => {
+                    const Icon = t.sc.icon;
+                    return (
+                        <div key={t.id} className="pointer-events-auto bg-white dark:bg-zinc-900 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-black/50 border border-gray-100 dark:border-zinc-800 p-4 w-72 sm:w-80 animate-in slide-in-from-right-8 fade-in duration-300">
+                            <div className="flex gap-4">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t.sc.bg} dark:bg-opacity-20 ${t.sc.color}`}>
+                                    <Icon size={20} strokeWidth={2.5} />
+                                </div>
+                                <div className="flex-1">
+                                    <h5 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Pedido #{t.orderIdCorto}</h5>
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">Estado actualizado a <span className={t.sc.color}>{t.newStatus}</span></p>
+                                </div>
+                                <button onClick={() => removeToast(t.id)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors self-start"><X size={16} /></button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 }

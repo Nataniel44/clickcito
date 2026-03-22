@@ -25,6 +25,28 @@ export function OrderRow({
     const StatusIcon = sc.icon;
     const total = orden.items?.reduce((a: number, i: any) => a + i.precio_unitario * i.cantidad, 0) || 0;
 
+    const handleActionWA = (estado_nuevo: string) => {
+        handleCambiarEstado(orden.id_transaccion, estado_nuevo);
+        const tel = orden.datos_logistica?.telefono_contacto || orden.telefono_contacto || "";
+        const phone = tel.replace(/\D/g, '');
+        const nombreCliente = orden.datos_logistica?.nombre_contacto || orden.nombre_contacto || "cliente";
+        const link = `${window.location.origin}/mis-pedidos`;
+
+        let msg = "";
+        switch (estado_nuevo) {
+            case "en_preparacion": msg = `¡Hola ${nombreCliente}! Tomamos tu pedido y ya lo estamos preparando. 🍳\n\nPodés seguir el estado acá:\n${link}`; break;
+            case "en_camino": msg = `¡Hola ${nombreCliente}! Tu pedido ya está en camino a tu dirección. 🛵\n\nPodés seguir el estado acá:\n${link}`; break;
+            case "entregado": msg = `¡Hola ${nombreCliente}! Marqué tu pedido como entregado. Esperamos que lo disfrutes. ✨\n\nTu ticket está acá:\n${link}`; break;
+            case "cancelado": msg = `Hola ${nombreCliente}, lamentablemente tuvimos que cancelar tu pedido. Contáctanos para más detalles.`; break;
+        }
+
+        if (phone) {
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+        } else {
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    };
+
     return (
         <div key={orden.id_transaccion} className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-4 md:p-5 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1 min-w-0">
@@ -65,18 +87,27 @@ export function OrderRow({
                         </button>
                     )}
 
-                    <div className="min-w-[100px] flex justify-end">
+                    <div className="min-w-[100px] flex sm:flex-col lg:flex-row justify-end gap-1">
                         {orden.estado !== "entregado" && orden.estado !== "cancelado" && (
-                            <button onClick={() => { if (confirm("¿Cancelar pedido?")) handleCambiarEstado(orden.id_transaccion, "cancelado"); }} className="px-3 py-2 mr-1 bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] font-black rounded-lg hover:bg-red-100 dark:hover:bg-red-900 transition-colors whitespace-nowrap">Cancelar</button>
+                            <button onClick={() => { if (confirm("¿Cancelar pedido?")) handleActionWA("cancelado"); }} className="px-3 py-2 mr-1 bg-red-50 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] font-black rounded-lg hover:bg-red-100 dark:hover:bg-red-900 transition-colors whitespace-nowrap">Cancelar</button>
                         )}
                         {orden.estado === "pendiente" && (
-                            <button onClick={() => handleCambiarEstado(orden.id_transaccion, "en_preparacion")} className="w-full px-3 py-2 bg-orange-600 text-white text-[10px] font-black rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap">Aceptar</button>
+                            <>
+                                <button onClick={() => handleCambiarEstado(orden.id_transaccion, "en_preparacion")} className="w-full px-3 py-2 bg-orange-100 text-orange-700 text-[10px] font-black rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap">Aceptar</button>
+                                <button onClick={() => handleActionWA("en_preparacion")} className="w-full px-3 py-2 bg-orange-600 text-white text-[10px] font-black rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap">+ Whatsapp</button>
+                            </>
                         )}
                         {orden.estado === "en_preparacion" && (
-                            <button onClick={() => handleCambiarEstado(orden.id_transaccion, "en_camino")} className="w-full px-3 py-2 bg-blue-600 text-white text-[10px] font-black rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">Despachar</button>
+                            <>
+                                <button onClick={() => handleCambiarEstado(orden.id_transaccion, "en_camino")} className="w-full px-3 py-2 bg-blue-100 text-blue-700 text-[10px] font-black rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap">Despachar</button>
+                                <button onClick={() => handleActionWA("en_camino")} className="w-full px-3 py-2 bg-blue-600 text-white text-[10px] font-black rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">+ Whatsapp</button>
+                            </>
                         )}
                         {orden.estado === "en_camino" && (
-                            <button onClick={() => handleCambiarEstado(orden.id_transaccion, "entregado")} className="w-full px-3 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap">Entregar</button>
+                            <>
+                                <button onClick={() => handleCambiarEstado(orden.id_transaccion, "entregado")} className="w-full px-3 py-2 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-lg hover:bg-emerald-200 transition-colors whitespace-nowrap">Entregar</button>
+                                <button onClick={() => handleActionWA("entregado")} className="w-full px-3 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap">+ Whatsapp</button>
+                            </>
                         )}
                         {orden.estado === "entregado" && (
                             <div className="p-2 text-emerald-500"><CheckCircle2 size={20} /></div>

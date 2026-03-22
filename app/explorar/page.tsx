@@ -201,22 +201,58 @@ export default function ExplorarPage() {
                             title="Seleccionados para vos"
                             icon="✨"
                             subtitle="Los mejores negocios de la zona"
-                            negocios={negocios.slice(0, 6)}
+                            negocios={negocios.slice(0, 8)}
                         />
 
-                        {/* Por rubros */}
-                        {Object.entries(negociosPorRubro).map(([key, list]) => (
+                        {/* Tendencias */}
+                        {negocios.length > 3 && (
                             <SectionCarousel
-                                key={key}
-                                title={RUBRO_CONFIG[key]?.label || key}
-                                icon={RUBRO_CONFIG[key]?.emoji || "📍"}
-                                negocios={list}
-                                subtitle={`Lo mejor en ${RUBRO_CONFIG[key]?.label.toLowerCase()}`}
+                                title="En tendencia"
+                                icon="🔥"
+                                subtitle="Lo más elegido por la comunidad esta semana"
+                                negocios={negocios.slice().reverse().slice(0, 8)}
                             />
-                        ))}
+                        )}
 
-                        {/* Banner */}
+                        {/* Banner Promocional principal */}
                         <PromoBanner />
+
+                        {/* Novedades */}
+                        {negocios.length > 5 && (
+                            <SectionCarousel
+                                title="Nuevos ingresos"
+                                icon="🚀"
+                                subtitle="Descubrí las últimas propuestas en Clickcito"
+                                negocios={negocios.slice(3, 10)}
+                            />
+                        )}
+
+                        {/* Categorías Generales (Por rubros) */}
+                        <div className="pt-4 border-t border-gray-100 dark:border-zinc-800/50">
+                            <h3 className="text-xl font-bold px-4 mb-2">Explorá por rubro</h3>
+                            <p className="text-sm text-gray-500 px-4 mb-6">Encontrá exactamente lo que buscás</p>
+                            <div className="space-y-10">
+                                {Object.entries(negociosPorRubro).map(([key, list]) => (
+                                    <SectionCarousel
+                                        key={key}
+                                        title={RUBRO_CONFIG[key]?.label || key}
+                                        icon={RUBRO_CONFIG[key]?.emoji || "📍"}
+                                        negocios={list}
+                                        subtitle={`Lo mejor en ${RUBRO_CONFIG[key]?.label.toLowerCase()}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Antojos de medianoche */}
+                        {negocios.length > 4 && (
+                            <SectionCarousel
+                                title="Para cualquier antojo"
+                                icon="🤤"
+                                subtitle="Opciones que nunca fallan, a cualquier hora"
+                                negocios={negocios.slice(1, 9)}
+                            />
+                        )}
 
                     </div>
                 ) : (
