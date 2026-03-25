@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import { Eye, Package, Tag, Trash2, Plus, Edit, ArrowLeft, Store, LayoutGrid, List, ArrowUp, ArrowDown, Save, SlidersHorizontal } from "lucide-react";
 import { EmptyState } from "./EmptyState";
 import { ProductModal } from "./ProductModal";
-import { updateNegocio } from "@/app/firebase/db";
+import { updateNegocio, updateProducto } from "@/app/firebase/db";
 import toast from "react-hot-toast";
+import Image from "next/image";
 
 function CategoryOrderModal({ isOpen, onClose, orderedKeys, negocioId }: any) {
     const [localOrder, setLocalOrder] = useState<string[]>([]);
@@ -66,6 +67,74 @@ function CategoryOrderModal({ isOpen, onClose, orderedKeys, negocioId }: any) {
     );
 }
 
+function ProductOrderModal({ isOpen, onClose, lista, categoria }: any) {
+    const [localOrder, setLocalOrder] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    React.useEffect(() => {
+        if (isOpen) setLocalOrder(lista);
+    }, [isOpen, lista]);
+
+    if (!isOpen) return null;
+
+    const moveUp = (idx: number) => {
+        if (idx === 0) return;
+        const newOrder = [...localOrder];
+        [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+        setLocalOrder(newOrder);
+    };
+
+    const moveDown = (idx: number) => {
+        if (idx === localOrder.length - 1) return;
+        const newOrder = [...localOrder];
+        [newOrder[idx + 1], newOrder[idx]] = [newOrder[idx], newOrder[idx + 1]];
+        setLocalOrder(newOrder);
+    };
+
+    const handleSave = async () => {
+        setLoading(true);
+        try {
+            await Promise.all(
+                localOrder.map((p, i) => updateProducto(p.id_producto, { orden: i }))
+            );
+            toast.success("Orden de productos actualizado");
+            onClose();
+        } catch (e) {
+            toast.error("Error al guardar el orden");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-[#FBFBFB] dark:bg-zinc-950 w-full max-w-sm rounded-[2rem] shadow-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden animate-in zoom-in duration-300 p-6 flex flex-col max-h-[85vh]">
+                <h3 className="font-black text-xl mb-4 flex items-center gap-2"><SlidersHorizontal className="text-orange-600" /> Ordenar en {categoria}</h3>
+                <div className="space-y-2 mb-6 overflow-y-auto custom-scrollbar flex-1">
+                    {localOrder.map((p, i) => (
+                        <div key={p.id_producto} className="flex items-center justify-between bg-white dark:bg-zinc-900 p-3 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm">
+                            <span className="font-bold text-sm truncate mr-2">{p.nombre_producto}</span>
+                            <div className="flex gap-1 shrink-0">
+                                <button onClick={() => moveUp(i)} disabled={i === 0} className="p-1.5 bg-gray-50 dark:bg-zinc-800 rounded-lg hover:text-orange-600 disabled:opacity-30 transition-colors"><ArrowUp size={14} /></button>
+                                <button onClick={() => moveDown(i)} disabled={i === localOrder.length - 1} className="p-1.5 bg-gray-50 dark:bg-zinc-800 rounded-lg hover:text-orange-600 disabled:opacity-30 transition-colors"><ArrowDown size={14} /></button>
+                            </div>
+                        </div>
+                    ))}
+                    {localOrder.length === 0 && <p className="text-xs text-center text-gray-400 py-10 font-bold">No hay productos en esta categoría.</p>}
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={onClose} disabled={loading} className="flex-1 py-3 bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors">Cancelar</button>
+                    <button onClick={handleSave} disabled={loading} className="flex-1 py-3 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 flex items-center justify-center gap-2 transition-colors">
+                        {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save size={16} />}
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function ProductsPanel({
     productos,
     loadingProductos,
@@ -103,11 +172,23 @@ export function ProductsPanel({
             if (!groups[cat]) groups[cat] = [];
             groups[cat].push(p);
         });
+
+        // Ordenar productos dentro de su categoría
+        Object.keys(groups).forEach(cat => {
+            groups[cat].sort((a, b) => {
+                const orderA = a.orden ?? 9999;
+                const orderB = b.orden ?? 9999;
+                if (orderA !== orderB) return orderA - orderB;
+                return a.nombre_producto.localeCompare(b.nombre_producto);
+            });
+        });
+
         return groups;
     }, [productos]);
 
     const [viewMode, setViewMode] = useState<"card" | "pill">("card");
     const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+    const [productOrderModalState, setProductOrderModalState] = useState<{ isOpen: boolean, categoria: string, lista: any[] }>({ isOpen: false, categoria: "", lista: [] });
     const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
 
     const orderedKeys = React.useMemo(() => {
@@ -196,14 +277,21 @@ export function ProductsPanel({
                                 <div key={categoria} className="space-y-3">
                                     <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2 sticky top-[60px] md:top-20 z-10 bg-[#f4f4f5]/90 dark:bg-zinc-950/90 backdrop-blur-md py-2 -mx-2 mb-2 rounded-lg flex justify-between items-center">
                                         <span>{categoria} <span className="opacity-50">({lista.length})</span></span>
+                                        <button onClick={() => setProductOrderModalState({ isOpen: true, categoria, lista })} className="text-orange-600 hover:text-orange-700 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg text-xs font-bold leading-none capitalize flex gap-1 items-center">
+                                            <SlidersHorizontal size={12} /> Ordenar Productos
+                                        </button>
                                     </h3>
 
                                     <div className={viewMode === "card" ? "space-y-3" : "flex flex-wrap gap-3"}>
                                         {lista.map((p: any) => (
                                             viewMode === "card" ? (
                                                 <div key={p.id_producto} className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-4 md:p-5 flex items-center gap-4 hover:shadow-md transition-shadow animate-in fade-in duration-300">
-                                                    <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
-                                                        <Tag size={20} className="text-orange-600" />
+                                                    <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0 overflow-hidden relative">
+                                                        {(p.imagen_url || p.imagen) ? (
+                                                            <Image src={p.imagen_url || p.imagen} alt={p.nombre_producto} fill className="object-cover" />
+                                                        ) : (
+                                                            <Tag size={20} className="text-orange-600" />
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <h4 className="font-bold text-sm truncate">{p.nombre_producto}</h4>
@@ -258,6 +346,12 @@ export function ProductsPanel({
                 onClose={() => setIsOrderModalOpen(false)}
                 orderedKeys={orderedKeys}
                 negocioId={negocioData?.id || negocioData?.id_negocio || user?.id_negocio}
+            />
+            <ProductOrderModal
+                isOpen={productOrderModalState.isOpen}
+                onClose={() => setProductOrderModalState(s => ({ ...s, isOpen: false }))}
+                categoria={productOrderModalState.categoria}
+                lista={productOrderModalState.lista}
             />
         </div >
     );

@@ -81,6 +81,12 @@ export async function createProducto(idNegocio: string, data: any) {
     return docRef.id;
 }
 
+export async function getProductoById(idProducto: string) {
+    const docRef = doc(db, PRODUCTOS_COL, idProducto);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id_producto: docSnap.id, ...docSnap.data() } : null;
+}
+
 export async function updateProducto(idProducto: string, data: any) {
     const docRef = doc(db, PRODUCTOS_COL, idProducto);
     // Al actualizar no se debería permitir cambiar el id_negocio sin reglas severas

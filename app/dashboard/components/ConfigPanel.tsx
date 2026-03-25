@@ -17,7 +17,8 @@ export function ConfigPanel({
     handleLogout,
     router,
     negocioData,
-    onRefresh
+    onRefresh,
+    handleToggleVisibility
 }: {
     user: any;
     loadingOrdenes: boolean;
@@ -31,6 +32,7 @@ export function ConfigPanel({
     router: any;
     negocioData?: any;
     onRefresh?: () => void;
+    handleToggleVisibility?: (id: string, current: boolean) => void;
 }) {
     const [isBusinessModalOpen, setIsBusinessModalOpen] = React.useState(false);
 
@@ -117,6 +119,23 @@ export function ConfigPanel({
                                 <ExternalLink size={16} className="text-gray-300" />
                             </button>
                         </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-black text-sm flex items-center gap-2"><Eye size={18} className="text-orange-500" /> Estado de Visibilidad</h3>
+                            <button
+                                onClick={() => negocioData?.id && handleToggleVisibility?.(negocioData.id, negocioData.activo !== false)}
+                                className={`w-12 h-6 rounded-full p-1 transition-all ${negocioData?.activo !== false ? 'bg-orange-500' : 'bg-gray-300 dark:bg-zinc-700'}`}
+                            >
+                                <div className={`w-4 h-4 bg-white rounded-full transition-all transform ${negocioData?.activo !== false ? 'translate-x-6' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-500 leading-tight">
+                            {negocioData?.activo !== false
+                                ? "Tu negocio es visible para todos en Clickcito."
+                                : "Tu negocio está oculto. Los clientes verán un aviso de 'Cerrado Temporalmente'."}
+                        </p>
                     </div>
 
                     <div className="bg-red-50 dark:bg-red-950/20 rounded-3xl border border-red-100 dark:border-red-900/30 p-6 shadow-sm">

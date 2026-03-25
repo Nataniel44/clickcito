@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, Search, ShoppingBag, Package, Users, Megaphone, BarChart3, Settings, ShieldCheck, Globe,
-    Clock, PackageCheck, Send, CheckCircle2, XCircle, History
+    Clock, PackageCheck, Send, CheckCircle2, XCircle, History, GraduationCap
 } from "lucide-react";
 
 export const BASE_SIDEBAR_ITEMS = [
@@ -12,6 +12,10 @@ export const BASE_SIDEBAR_ITEMS = [
     { id: "estadisticas", icon: BarChart3, label: "Estadísticas" },
     { id: "auditoria", icon: History, label: "Auditoría" },
     { id: "configuracion", icon: Settings, label: "Configuración" },
+];
+
+export const EDUCATION_SIDEBAR_ITEMS = [
+    { id: "academy", icon: GraduationCap, label: "Gestión Academy" },
 ];
 
 export const EXTERNAL_LINKS = [

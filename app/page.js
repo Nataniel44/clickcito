@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Rocket,
@@ -10,11 +12,31 @@ import {
   ShoppingBag,
   Clock,
   MessageCircle,
-  Zap
+  Zap,
+  LayoutDashboard
 } from "lucide-react";
 import Footer from "./components/Footer";
+import { useAuth } from "@/app/context/AuthContext";
 
 export default function Home() {
+  const { user } = useAuth();
+
+  const isOwnerOrAdmin = user?.rol === "dueño_negocio" || user?.rol === "admin_clickcito" || user?.rol === "admin";
+
+  const primaryBtn = !user ? {
+    href: "/login",
+    icon: <Rocket size={20} />,
+    text: "Empezar Gratis"
+  } : isOwnerOrAdmin ? {
+    href: "/dashboard",
+    icon: <LayoutDashboard size={20} />,
+    text: "Ir a mi Panel"
+  } : {
+    href: "/mis-pedidos",
+    icon: <ShoppingBag size={20} />,
+    text: "Mis Pedidos"
+  };
+
   return (
     <main className="min-h-screen bg-[#FDFDFD] dark:bg-[#0A0A0A] overflow-x-hidden selection:bg-orange-100 selection:text-orange-600">
 
@@ -43,19 +65,21 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/login" className="group relative w-full sm:w-auto">
+            <Link href={primaryBtn.href} className="group relative w-full sm:w-auto">
               <div className="absolute -inset-1 bg-gradient-to-r from-orange-600 to-orange-400 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500" />
               <div className="relative flex items-center justify-center gap-3 px-10 py-5 bg-orange-600 text-white font-black text-lg rounded-2xl shadow-xl transition-all hover:scale-[1.03] active:scale-95">
-                <Rocket size={20} /> Empezar Gratis
+                {primaryBtn.icon} {primaryBtn.text}
               </div>
             </Link>
             <Link href="/explorar" className="flex items-center justify-center gap-3 px-10 py-5 bg-white dark:bg-zinc-900 border-2 border-gray-100 dark:border-zinc-800 text-gray-900 dark:text-white font-black text-lg rounded-2xl hover:border-indigo-500/50 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all w-full sm:w-auto active:scale-95">
               <Search size={20} /> Explorar Tiendas
             </Link>
-            <section className="flex items-center gap-2">
-              <p className="text-gray-500 dark:text-zinc-400 font-medium">O también puedes </p>
-              <Link className="font-bold" href="/login">Iniciar sesión</Link>
-            </section>
+            {!user && (
+              <section className="flex items-center gap-2">
+                <p className="text-gray-500 dark:text-zinc-400 font-medium">O también puedes </p>
+                <Link className="font-bold" href="/login">Iniciar sesión</Link>
+              </section>
+            )}
           </div>
 
           <div className="mt-16 flex items-center justify-center gap-8 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
@@ -181,8 +205,8 @@ export default function Home() {
             Unite a la red de negocios que ya están transformando su forma de vender. Sin contratos, sin letra chica.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/login" className="px-12 py-5 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-lg rounded-2xl hover:scale-105 transition-all shadow-xl active:scale-95 w-full sm:w-auto">
-              Registrar Negocio Gratis
+            <Link href={user ? (isOwnerOrAdmin ? "/dashboard" : "/mis-pedidos") : "/login"} className="px-12 py-5 bg-gray-900 dark:bg-white text-white dark:text-black font-black text-lg rounded-2xl hover:scale-105 transition-all shadow-xl active:scale-95 w-full sm:w-auto">
+              {user ? (isOwnerOrAdmin ? "Ir a mi Panel" : "Ver Mis Pedidos") : "Registrar Negocio Gratis"}
             </Link>
             <Link href="https://wa.me/543755223344" target="_blank" className="flex items-center gap-2 text-gray-500 hover:text-orange-600 font-black text-lg transition-colors py-4">
               <MessageCircle size={24} className="text-green-500" /> Hablar con Soporte

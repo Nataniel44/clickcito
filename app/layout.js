@@ -10,6 +10,7 @@ import { Suspense } from "react";
 import PageTransitions from "./PageTransitions";
 
 import CartConflictModal from "./components/CartConflictModal";
+import OfflineNotice from "./components/OfflineNotice";
 
 export default function RootLayout({ children }) {
   return (
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
 
 
         <AuthProvider>
+          <OfflineNotice />
           <Navbar />
           <CartProvider>
             <CartConflictModal />

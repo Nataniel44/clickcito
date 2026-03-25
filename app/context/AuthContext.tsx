@@ -30,11 +30,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let unsubscribeDoc: (() => void) | undefined;
+
         const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
                 const userDocRef = doc(db, "usuarios", firebaseUser.uid);
                 // Usamos onSnapshot para que el perfil de usuario sea en tiempo real (nombre, rol, id_negocio)
-                const unsubscribeDoc = onSnapshot(userDocRef, (snap) => {
+                unsubscribeDoc = onSnapshot(userDocRef, (snap) => {
                     if (snap.exists()) {
                         setUser({
                             uid: firebaseUser.uid,
@@ -50,18 +52,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     setLoading(false);
                 }, (error) => {
                     console.error("Error in user doc snapshot:", error);
-                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email });
+                    setUser({ uid: firebaseUser.uid, email: firebaseUser.email } as any);
                     setLoading(false);
                 });
-
-                return () => unsubscribeDoc();
             } else {
+                if (unsubscribeDoc) {
+                    unsubscribeDoc();
+                    unsubscribeDoc = undefined;
+                }
                 setUser(null);
                 setLoading(false);
             }
         });
 
-        return () => unsubscribeAuth();
+        return () => {
+            if (unsubscribeDoc) {
+                unsubscribeDoc();
+            }
+            unsubscribeAuth();
+        };
     }, []);
 
     return (

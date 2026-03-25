@@ -3,19 +3,50 @@
 import Image from "next/image";
 import Link from "next/link";
 import { RUBRO_CONFIG, Negocio } from "./types";
+import { resolveImageUrl } from "@/app/utils/imageUtils";
+import { useState } from "react";
 
 export function BusinessCard({ negocio }: { negocio: Negocio }) {
+    const [loadingImage, setLoadingImage] = useState(true);
     const config = RUBRO_CONFIG[negocio.rubro] || RUBRO_CONFIG.default;
 
-    // Logic for "isOpen"
-    let currentDayIndex = new Date().getDay();
-    currentDayIndex = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+    // Improved Logic for "isOpen" with time parsing
+    const ahora = new Date();
+    const currentDayIndex = ahora.getDay() === 0 ? 6 : ahora.getDay() - 1;
     const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
     const todayKey = diasSemana[currentDayIndex];
     const todaysHours = negocio.horarios?.[todayKey] || "Cerrado";
 
+    const isBusinessCurrentlyOpen = () => {
+        if (negocio.activo === false || todaysHours === "Cerrado") return false;
+
+        const currentTime = ahora.getHours() * 60 + ahora.getMinutes();
+
+        // Formatos soportados: "20:00 - 00:00", "11:00 - 15:00, 20:00 - 00:00", "11:00 a 15:00"
+        const spans = todaysHours.split(',').map(s => s.trim());
+
+        for (const span of spans) {
+            const times = span.split(/[-a]/).map(t => t.trim());
+            if (times.length < 2) continue;
+
+            const [startH, startM] = times[0].split(':').map(Number);
+            let [endH, endM] = times[1].split(':').map(Number);
+
+            if (isNaN(startH) || isNaN(endH)) continue;
+
+            const startTotal = startH * 60 + (startM || 0);
+            let endTotal = endH * 60 + (endM || 0);
+
+            // Handle midnight (00:00 is technically 1440 mins)
+            if (endTotal <= startTotal) endTotal += 1440;
+
+            if (currentTime >= startTotal && currentTime < endTotal) return true;
+        }
+        return false;
+    };
+
+    const isOpen = isBusinessCurrentlyOpen();
     const isNew = negocio.createdAt ? (Date.now() - negocio.createdAt.toMillis?.() < 30 * 24 * 60 * 60 * 1000) : true;
-    const isOpen = negocio.activo !== false && todaysHours !== "Cerrado";
     const realRating = negocio.rating || null;
     const ratingAvg = realRating?.total_resenas && realRating.total_resenas > 0 ? Number(realRating.promedio).toFixed(1) : null;
 
@@ -43,14 +74,21 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
             <div className="flex items-start gap-2 md:gap-2.5">
                 <div className="w-[40px] h-[40px] md:w-[46px] md:h-[46px] rounded-xl bg-gray-50 dark:bg-zinc-800 flex items-center justify-center shrink-0 relative text-xl">
                     {negocio.logo_url ? (
-                        <Image
-                            src={negocio.logo_url}
-                            alt={negocio.nombre}
-                            width={46}
-                            height={46}
-                            className="w-full h-full object-cover rounded-xl"
-                            unoptimized
-                        />
+                        <>
+                            {loadingImage && (
+                                <div className="absolute inset-0 bg-gray-100 dark:bg-zinc-800 animate-pulse z-10" />
+                            )}
+                            <Image
+                                src={resolveImageUrl(negocio.logo_url)}
+                                alt={negocio.nombre}
+                                width={46}
+                                height={46}
+                                className={`w-full h-full object-cover rounded-xl transition-all duration-700 ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'}`}
+                                unoptimized
+                                onLoad={() => setLoadingImage(false)}
+                                onError={() => setLoadingImage(false)}
+                            />
+                        </>
                     ) : (
                         <span className="leading-none text-lg md:text-xl">{config.emoji}</span>
                     )}

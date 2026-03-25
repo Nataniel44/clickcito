@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X, ArrowUpRight, LogOut } from "lucide-react";
-import { BASE_SIDEBAR_ITEMS, EXTERNAL_LINKS, ADMIN_SIDEBAR_ITEMS } from "./constants";
+import { BASE_SIDEBAR_ITEMS, EXTERNAL_LINKS, ADMIN_SIDEBAR_ITEMS, EDUCATION_SIDEBAR_ITEMS } from "./constants";
 
 export function Sidebar({
     user,
@@ -15,7 +15,8 @@ export function Sidebar({
     metrics,
     handleLogout,
     router,
-    loading
+    loading,
+    negocio
 }: {
     user: any;
     activeTab: string;
@@ -26,8 +27,14 @@ export function Sidebar({
     handleLogout: () => void;
     router: any;
     loading: boolean;
+    negocio?: any;
 }) {
-    const ALL_SIDEBAR_ITEMS = [...BASE_SIDEBAR_ITEMS, ...(user?.rol === "admin_clickcito" || user?.rol === "admin" ? ADMIN_SIDEBAR_ITEMS : [])];
+    const isEducation = negocio?.rubro?.toLowerCase().includes("educacion") || negocio?.rubro?.toLowerCase().includes("academia");
+
+    const ALL_SIDEBAR_ITEMS = [
+        ...BASE_SIDEBAR_ITEMS,
+        ...(user?.rol === "admin_clickcito" || user?.rol === "admin" ? ADMIN_SIDEBAR_ITEMS : [])
+    ];
 
     return (
         <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
@@ -40,6 +47,23 @@ export function Sidebar({
                 </div>
 
                 <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
+                    {/* Sección Academia (Solo educación) */}
+                    {isEducation && (
+                        <div className="mb-6 space-y-1">
+                            <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-4 mb-2">Centro de Formación</p>
+                            {EDUCATION_SIDEBAR_ITEMS.map(item => (
+                                <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === item.id
+                                        ? "bg-orange-50 text-orange-600 dark:bg-orange-600/10 dark:text-orange-500"
+                                        : "text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-200"
+                                        }`}>
+                                    <item.icon size={20} strokeWidth={2.5} />{item.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">Gestión de Negocio</p>
                     {ALL_SIDEBAR_ITEMS.map(item => (
                         <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === item.id

@@ -12,6 +12,8 @@ import { SectionCarousel } from "@/components/explorar/SectionCarousel";
 import { ExploreHero } from "@/components/explorar/ExploreHero";
 import { PromoBanner } from "@/components/explorar/PromoBanner";
 import { EmptyResults } from "@/components/explorar/EmptyResults";
+import { ExternalBusinessCard } from "@/components/explorar/ExternalBusinessCard";
+import { getNearbyBusinesses, OSMBusiness, searchLocation, reverseGeocode } from "@/app/utils/osm";
 import { FooterCTA } from "@/components/explorar/FooterCTA";
 
 // Helper para distancia (KM)
@@ -33,11 +35,15 @@ export default function ExplorarPage() {
     const [activeRubro, setActiveRubro] = useState("todos");
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [isLocating, setIsLocating] = useState(false);
+    const [externalBiz, setExternalBiz] = useState<OSMBusiness[]>([]);
+    const [loadingExternal, setLoadingExternal] = useState(false);
+    const [locationName, setLocationName] = useState<string>("");
 
     useEffect(() => {
         async function fetchNegocios() {
             try {
-                const data = await getAllNegocios();
+                const allData = await getAllNegocios() as Negocio[];
+                const data = allData.filter((n: Negocio) => n.activo !== false); // Filter inactive publically
                 // "Sistema de recomendación" -> Barajar con semilla diaria para consistencia
                 const today = new Date().toDateString();
                 const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -57,11 +63,44 @@ export default function ExplorarPage() {
         fetchNegocios();
     }, []);
 
+    useEffect(() => {
+        async function fetchExternal(lat: number, lng: number) {
+            setLoadingExternal(true);
+            try {
+                const results = await getNearbyBusinesses(lat, lng);
+                setExternalBiz(results);
+            } catch (error) {
+                console.error("OSM error:", error);
+            } finally {
+                setLoadingExternal(false);
+            }
+        }
+
+        if (userLocation) {
+            fetchExternal(userLocation.lat, userLocation.lng);
+        } else {
+            setExternalBiz([]);
+        }
+    }, [userLocation]);
+
     const lastScrollY = useRef(0);
     const [showNavbar, setShowNavbar] = useState(true);
     const resultsRef = useRef<HTMLDivElement>(null);
 
     const isIdle = searchTerm === "" && activeRubro === "todos" && !userLocation;
+
+    // Filtro para negocios externos (OSM) basado en el rubro activo
+    const filteredExternalBiz = useMemo(() => {
+        if (activeRubro === "todos") return externalBiz;
+        // Mapeamos los rubros internos a las categorías de OSM
+        return externalBiz.filter(biz => {
+            if (activeRubro === "gastronomia") return biz.category === "gastronomia";
+            if (activeRubro === "retail") return biz.category === "retail" || biz.category === "comercio";
+            if (activeRubro === "servicios") return biz.category === "servicios";
+            if (activeRubro === "construccion") return biz.category === "construccion";
+            return true;
+        });
+    }, [externalBiz, activeRubro]);
 
     // Auto-scroll logic when filtering
     useEffect(() => {
@@ -99,14 +138,12 @@ export default function ExplorarPage() {
         if (!navigator.geolocation) return;
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                setUserLocation({
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude
-                });
+            async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                setUserLocation({ lat: latitude, lng: longitude });
                 setIsLocating(false);
-                // Si detectamos ubicación, podemos resetear rubro o búsqueda para mostrar "Cerca de ti"
-                // O simplemente dejar que el filtro actúe si hay coordenadas en los negocios
+                const name = await reverseGeocode(latitude, longitude);
+                if (name) setLocationName(name);
             },
             (err) => {
                 console.error("Geolocation error:", err);
@@ -115,10 +152,28 @@ export default function ExplorarPage() {
         );
     };
 
+    const handleManualLocation = async (query: string) => {
+        setIsLocating(true);
+        try {
+            const result = await searchLocation(query);
+            if (result) {
+                setUserLocation({ lat: result.lat, lng: result.lng });
+                setLocationName(result.display_name.split(',')[0]);
+            } else {
+                alert("No pudimos encontrar esa ubicación. Intentá ser más específico (ej: Ciudad, Provincia).");
+            }
+        } catch (error) {
+            console.error("Manual location error:", error);
+        } finally {
+            setIsLocating(false);
+        }
+    };
+
     const handleClearFilters = () => {
         setSearchTerm("");
         setActiveRubro("todos");
         setUserLocation(null);
+        setLocationName("");
     };
 
     const filtered = useMemo(() => {
@@ -192,10 +247,13 @@ export default function ExplorarPage() {
                     setActiveRubro={setActiveRubro}
                     onLocationClick={handleGetLocation}
                     isLocating={isLocating}
+                    onManualLocation={handleManualLocation}
+                    locationName={locationName}
                 />
 
-                {isIdle ? (
-                    <div className="space-y-12 animate-fade-in">
+                {/* Featured Sections (Only for 'Todos' and no active search) */}
+                {activeRubro === "todos" && !searchTerm && !userLocation && (
+                    <div className="space-y-12 animate-fade-in mb-10">
                         {/* Recomendados */}
                         <SectionCarousel
                             title="Seleccionados para vos"
@@ -214,120 +272,107 @@ export default function ExplorarPage() {
                             />
                         )}
 
-                        {/* Banner Promocional principal */}
-                        <PromoBanner />
-
-                        {/* Novedades */}
-                        {negocios.length > 5 && (
-                            <SectionCarousel
-                                title="Nuevos ingresos"
-                                icon="🚀"
-                                subtitle="Descubrí las últimas propuestas en Clickcito"
-                                negocios={negocios.slice(3, 10)}
-                            />
-                        )}
-
-                        {/* Categorías Generales (Por rubros) */}
-                        <div className="pt-4 border-t border-gray-100 dark:border-zinc-800/50">
-                            <h3 className="text-xl font-bold px-4 mb-2">Explorá por rubro</h3>
-                            <p className="text-sm text-gray-500 px-4 mb-6">Encontrá exactamente lo que buscás</p>
-                            <div className="space-y-10">
-                                {Object.entries(negociosPorRubro).map(([key, list]) => (
-                                    <SectionCarousel
-                                        key={key}
-                                        title={RUBRO_CONFIG[key]?.label || key}
-                                        icon={RUBRO_CONFIG[key]?.emoji || "📍"}
-                                        negocios={list}
-                                        subtitle={`Lo mejor en ${RUBRO_CONFIG[key]?.label.toLowerCase()}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Antojos de medianoche */}
-                        {negocios.length > 4 && (
-                            <SectionCarousel
-                                title="Para cualquier antojo"
-                                icon="🤤"
-                                subtitle="Opciones que nunca fallan, a cualquier hora"
-                                negocios={negocios.slice(1, 9)}
-                            />
-                        )}
-
-                    </div>
-                ) : (
-                    <div ref={resultsRef} className="animate-fade-in max-w-5xl mx-auto">
-                        <div className="flex flex-col gap-6">
-                            {/* Sticky Search Header - Integrated with Navbar on Mobile */}
-                            <div
-                                className="sticky z-30 -mx-4 md:mx-0 px-4 py-3 md:py-4 bg-[#FDFDFD] dark:bg-[#060606] border-b border-gray-100 dark:border-zinc-800/80 shadow-sm md:shadow-none transition-all duration-500 ease-in-out"
-                                style={{ top: showNavbar ? '68px' : '0px' }}
-                            >
-                                <div className="flex flex-col gap-2.5 max-w-5xl mx-auto">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-[12px] md:text-[14px] font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                            {filtered.length} Resultados
-                                            {searchTerm && <span className="text-orange-600 truncate max-w-[120px]">&quot;{searchTerm}&quot;</span>}
-                                            {activeRubro !== "todos" && <span className="px-1 py-0.5 bg-orange-50 dark:bg-orange-600/10 text-orange-600 rounded text-[9px] uppercase tracking-tighter">{RUBRO_CONFIG[activeRubro]?.label}</span>}
-                                        </h2>
-                                        <button
-                                            onClick={handleClearFilters}
-                                            className="text-[10px] font-bold text-gray-400 hover:text-orange-600 transition-colors uppercase"
-                                        >
-                                            Limpiar
-                                        </button>
-                                    </div>
-
-                                    {/* Category Search Filter - Compact horizontal scroll */}
-                                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
-                                        <button
-                                            onClick={() => setActiveRubro("todos")}
-                                            className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === "todos"
-                                                ? "bg-orange-600 text-white border-orange-600"
-                                                : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800"}`}
-                                        >
-                                            Todos
-                                        </button>
-                                        {Object.entries(RUBRO_CONFIG).filter(([k]) => k !== "default").map(([key, config]) => (
-                                            <button
-                                                key={key}
-                                                onClick={() => setActiveRubro(key)}
-                                                className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === key
-                                                    ? "bg-orange-600 text-white border-orange-600"
-                                                    : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800"}`}
-                                            >
-                                                {config.label}
-                                            </button>
-                                        ))}
-                                        {/* Quick Filters */}
-                                        <div className="w-[1px] h-4 bg-gray-100 dark:bg-zinc-800 shrink-0 mx-1" />
-                                        <button className="px-4 py-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-[11px] font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap hover:border-orange-500 transition-colors">
-                                            Abiertos
-                                        </button>
-                                        {userLocation && (
-                                            <div className="px-4 py-2 bg-green-500 text-white rounded-xl text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-md shadow-green-500/10">
-                                                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                                                Cerca
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {filtered.length > 0 ? (
-                                <div className="bg-white dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800 rounded-2xl md:rounded-3xl overflow-hidden shadow-sm">
-                                    <div className="flex flex-col">
-                                        {filtered.map((n) => (
-                                            <BusinessResultItem key={n.id} negocio={n} distancia={n.distance} />
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : (
-                                <EmptyResults onClear={handleClearFilters} />
-                            )}
-                        </div>
                     </div>
                 )}
+
+                <div ref={resultsRef} className="animate-fade-in max-w-5xl mx-auto">
+                    <div className="flex flex-col gap-6">
+                        {/* Sticky Search Header - Integrated with Navbar on Mobile */}
+                        <div
+                            className="sticky z-30 -mx-4 md:mx-0 px-4 py-3 md:py-4 bg-[#FDFDFD] dark:bg-[#060606] border-b border-gray-100 dark:border-zinc-800/80 shadow-sm md:shadow-none transition-all duration-500 ease-in-out"
+                            style={{ top: showNavbar ? '68px' : '0px' }}
+                        >
+                            <div className="flex flex-col gap-2.5 max-w-5xl mx-auto">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-[12px] md:text-[14px] font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                        {filtered.length} Resultados
+                                        {searchTerm && <span className="text-orange-600 truncate max-w-[120px] ml-1">&quot;{searchTerm}&quot;</span>}
+                                        {activeRubro !== "todos" && <span className="px-2 py-0.5 bg-orange-50 dark:bg-orange-600/10 text-orange-600 rounded text-[9px] uppercase tracking-tighter font-black">{RUBRO_CONFIG[activeRubro]?.label}</span>}
+                                    </h2>
+                                    <button
+                                        onClick={handleClearFilters}
+                                        className="text-[10px] font-bold text-gray-400 hover:text-orange-600 transition-colors uppercase tracking-widest"
+                                    >
+                                        Limpiar filtros
+                                    </button>
+                                </div>
+
+                                {/* Category Search Filter - Compact horizontal scroll */}
+                                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
+                                    <button
+                                        onClick={() => setActiveRubro("todos")}
+                                        className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === "todos"
+                                            ? "bg-orange-600 text-white border-orange-600"
+                                            : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700"}`}
+                                    >
+                                        Todos
+                                    </button>
+                                    {Object.entries(RUBRO_CONFIG).filter(([k]) => k !== "default").map(([key, config]) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => setActiveRubro(key)}
+                                            className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === key
+                                                ? "bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-500/10"
+                                                : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700"}`}
+                                        >
+                                            {config.label}
+                                        </button>
+                                    ))}
+                                    <div className="w-[1px] h-4 bg-gray-100 dark:bg-zinc-800 shrink-0 mx-1" />
+                                    <button
+                                        onClick={() => { }}
+                                        className="px-4 py-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-[11px] font-bold text-gray-500 hover:text-orange-600 hover:border-orange-200 transition-all whitespace-nowrap shadow-sm"
+                                    >
+                                        Abiertos ahora
+                                    </button>
+                                    {userLocation && (
+                                        <div className="px-4 py-2 bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-600 dark:text-green-500 rounded-xl text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm">
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                            Cerca de mí
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {filtered.length > 0 ? (
+                            <div className="space-y-6 md:space-y-8">
+                                <div className="flex items-center gap-3.5 px-1 sm:px-0">
+                                    <div className="p-3 bg-orange-50 dark:bg-orange-600/10 rounded-2xl text-orange-600 shadow-sm shadow-orange-500/5">
+                                        {activeRubro === "todos" ? <ShoppingBag size={22} className="opacity-90" /> : <span className="text-xl leading-none">{RUBRO_CONFIG[activeRubro]?.emoji || "📍"}</span>}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+                                            {activeRubro === "todos" ? (searchTerm ? "Resultados de búsqueda" : "Todos los Negocios") : RUBRO_CONFIG[activeRubro]?.label}
+                                        </h3>
+                                        <p className="text-[13px] md:text-sm text-gray-500 font-medium mt-0.5">
+                                            Mostrando {filtered.length} {filtered.length === 1 ? 'establecimiento' : 'establecimientos encontrados'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 pb-10">
+                                    {/* Negocios de Clickcito */}
+                                    {filtered.map((n) => (
+                                        <BusinessCard key={n.id} negocio={n} />
+                                    ))}
+
+                                    {/* Negocios Externos (OSM/Google Maps) */}
+                                    {!loadingExternal && filteredExternalBiz.map((biz) => (
+                                        <ExternalBusinessCard key={biz.id} business={biz} />
+                                    ))}
+
+                                    {/* Skeleton para carga de externos */}
+                                    {loadingExternal && [...Array(4)].map((_, i) => (
+                                        <div key={`skeleton-${i}`} className="h-44 bg-gray-100 dark:bg-zinc-800 rounded-3xl animate-pulse" />
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <EmptyResults onClear={handleClearFilters} />
+                        )}
+                    </div>
+                </div>
 
                 <FooterCTA />
             </div>

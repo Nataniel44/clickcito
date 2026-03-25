@@ -8,11 +8,14 @@ import { db } from "@/app/firebase/config";
 import {
     Clock, PackageCheck, Send, CheckCircle2,
     ShoppingBag, ArrowLeft, Search, HelpCircle,
-    AlertCircle, ChevronRight, X, MessageSquare, SendHorizonal
+    AlertCircle, ChevronRight, X, MessageSquare, SendHorizonal,
+    ExternalLink, GraduationCap, ArrowRight
 } from "lucide-react";
+import Link from "next/link";
 
 // --- Tipos ---
 interface LineaPedido {
+    id_producto?: string;
     nombre_producto: string;
     cantidad: number;
     precio_unitario: number;
@@ -179,6 +182,15 @@ export default function MisPedidosPage() {
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-1">{ordenes.length} Transacciones totales</p>
                         </div>
                     </div>
+
+                    {/* Botón de Mis Cursos */}
+                    <button
+                        onClick={() => router.push('/cursos')}
+                        className="px-4 py-2.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-sm"
+                    >
+                        <GraduationCap size={16} strokeWidth={2.5} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Mis Cursos</span>
+                    </button>
                 </div>
 
                 {/* Controles: Filtros + Búsqueda */}
@@ -248,12 +260,24 @@ export default function MisPedidosPage() {
                                     {/* Items Preview */}
                                     <div className="bg-gray-50/50 dark:bg-zinc-800/20 rounded-xl p-4 mb-5 space-y-2.5">
                                         {o.items?.map((item: LineaPedido, i: number) => (
-                                            <div key={i} className="flex justify-between items-center text-[11px]">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="w-5 h-5 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-md font-black text-gray-400 border border-gray-100 dark:border-zinc-800 text-[9px]">{item.cantidad}</span>
-                                                    <span className="text-gray-700 dark:text-gray-300 font-bold tracking-tight">{item.nombre_producto}</span>
+                                            <div key={i} className="flex flex-col gap-2">
+                                                <div className="flex justify-between items-center text-[11px]">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="w-5 h-5 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-md font-black text-gray-400 border border-gray-100 dark:border-zinc-800 text-[9px]">{item.cantidad}</span>
+                                                        <span className="text-gray-700 dark:text-gray-300 font-bold tracking-tight">{item.nombre_producto}</span>
+                                                    </div>
+                                                    <span className="font-black text-gray-900 dark:text-white">${(item.precio_unitario * (item.cantidad || 1)).toLocaleString()}</span>
                                                 </div>
-                                                <span className="font-black text-gray-900 dark:text-white">${(item.precio_unitario * (item.cantidad || 1)).toLocaleString()}</span>
+                                                {/* Botón de acceso al curso sólo si NO está pendiente ni cancelado */}
+                                                {(o.estado !== 'pendiente' && o.estado !== 'cancelado') && (
+                                                    <Link
+                                                        href={`/cursos/${(item as any).id_producto || ''}`}
+                                                        className="flex items-center justify-center gap-2 py-2 bg-indigo-600 dark:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.02] active:scale-95 transition-all shadow-md shadow-indigo-500/20"
+                                                    >
+                                                        <ArrowRight size={12} strokeWidth={3} />
+                                                        Ir al Curso / Aula
+                                                    </Link>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -373,12 +397,24 @@ export default function MisPedidosPage() {
                             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resumen de Items</h4>
                             <div className="bg-gray-50/50 dark:bg-zinc-800/20 rounded-2xl p-4 space-y-3">
                                 {selectedOrder.items?.map((item: any, i: number) => (
-                                    <div key={i} className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-3">
-                                            <span className="w-6 h-6 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-lg font-black text-gray-400 border border-gray-100 dark:border-zinc-800 text-[10px]">{item.cantidad || 1}</span>
-                                            <span className="text-gray-900 dark:text-gray-100 font-bold">{item.nombre_producto}</span>
+                                    <div key={i} className="flex flex-col gap-2">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-6 h-6 flex items-center justify-center bg-white dark:bg-zinc-900 rounded-lg font-black text-gray-400 border border-gray-100 dark:border-zinc-800 text-[10px]">{item.cantidad || 1}</span>
+                                                <span className="text-gray-900 dark:text-gray-100 font-bold">{item.nombre_producto}</span>
+                                            </div>
+                                            <span className="font-black text-gray-900 dark:text-white">${((item.precio_unitario || 0) * (item.cantidad || 1)).toLocaleString()}</span>
                                         </div>
-                                        <span className="font-black text-gray-900 dark:text-white">${((item.precio_unitario || 0) * (item.cantidad || 1)).toLocaleString()}</span>
+                                        {/* Link de acceso en detalle */}
+                                        {(selectedOrder.estado !== 'pendiente' && selectedOrder.estado !== 'cancelado') && (
+                                            <Link
+                                                href={`/cursos/${item.id_producto || ''}`}
+                                                className="w-full py-3 bg-indigo-600 dark:bg-indigo-500 text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:scale-[1.01] active:scale-95 transition-all flex items-center justify-center gap-2 mt-1 shadow-lg shadow-indigo-500/10"
+                                            >
+                                                <ArrowRight size={14} strokeWidth={3} />
+                                                Acceder al Curso ahora
+                                            </Link>
+                                        )}
                                     </div>
                                 ))}
                             </div>

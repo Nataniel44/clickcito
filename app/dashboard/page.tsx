@@ -23,6 +23,7 @@ import { AdminUsersPanel } from "./components/AdminUsersPanel";
 import { ActivityLogPanel } from "./components/ActivityLogPanel";
 import { OrderModal } from "./components/OrderModal";
 import { OrderRow } from "./components/OrderRow";
+import { EducationPanel } from "./components/EducationPanel";
 import { BASE_SIDEBAR_ITEMS, ADMIN_SIDEBAR_ITEMS } from "./components/constants";
 
 export default function DashboardPage() {
@@ -65,7 +66,7 @@ export default function DashboardPage() {
 
     // ═══════ AUTO-CLEAR MANAGED BUSINESS ═══════
     useEffect(() => {
-        if (activeTab !== "productos" && managedBusinessId) {
+        if (activeTab !== "productos" && activeTab !== "academy" && managedBusinessId) {
             setManagedBusinessId(null);
             setManagedBusinessData(null);
         }
@@ -567,6 +568,20 @@ export default function DashboardPage() {
         }
     };
 
+    const handleToggleVisibility = async (id: string, current: boolean) => {
+        try {
+            await updateNegocio(id, { activo: !current });
+            toast.success(`Visibilidad ${!current ? 'Activada' : 'Pausada'}`);
+            // Also update local state to avoid full refresh if possible, or just refresh
+            setAdminNegocios(prev => prev.map(n => n.id === id ? { ...n, activo: !current } : n));
+            if (negocioData?.id === id) {
+                setNegocioData(prev => prev ? { ...prev, activo: !current } : null);
+            }
+        } catch (error) {
+            toast.error("Error al cambiar visibilidad");
+        }
+    };
+
 
     const renderOrderRow = (o: any) => (
         <OrderRow
@@ -665,6 +680,7 @@ export default function DashboardPage() {
                 router={router}
                 negocioData={negocioData}
                 onRefresh={refreshAdminData}
+                handleToggleVisibility={handleToggleVisibility}
             />
         ),
         auditoria: () => (
@@ -683,8 +699,22 @@ export default function DashboardPage() {
                     setManagedBusinessData(n);
                     setActiveTab("productos");
                 }}
+                handleManageAcademy={(n) => {
+                    setManagedBusinessId(n.id);
+                    setManagedBusinessData(n);
+                    setActiveTab("academy");
+                }}
                 router={router}
                 onRefresh={refreshAdminData}
+                handleToggleVisibility={handleToggleVisibility}
+            />
+        ),
+        academy: () => (
+            <EducationPanel
+                productos={productos}
+                negocio={managedBusinessData || negocioData}
+                user={user}
+                onStopManaging={managedBusinessId ? () => { setManagedBusinessId(null); setManagedBusinessData(null); } : undefined}
             />
         ),
     };
@@ -704,6 +734,7 @@ export default function DashboardPage() {
                 handleLogout={handleLogout}
                 router={router}
                 loading={loading}
+                negocio={negocioData}
             />
 
             {isSidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />}

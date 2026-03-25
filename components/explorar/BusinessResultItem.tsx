@@ -4,8 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, MapPin, MessageCircle, ChevronRight, CheckCircle2 } from "lucide-react";
 import { RUBRO_CONFIG, Negocio } from "./types";
+import { useState } from "react";
+import { resolveImageUrl } from "@/app/utils/imageUtils";
 
 export function BusinessResultItem({ negocio, distancia }: { negocio: Negocio; distancia?: number }) {
+    const [loadingImage, setLoadingImage] = useState(true);
     const config = RUBRO_CONFIG[negocio.rubro] || RUBRO_CONFIG.default;
 
     // Horarios logic
@@ -37,13 +40,20 @@ export function BusinessResultItem({ negocio, distancia }: { negocio: Negocio; d
                 {/* Image Section */}
                 <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 overflow-hidden rounded-2xl bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-800 shadow-sm self-center">
                     {negocio.logo_url ? (
-                        <Image
-                            src={negocio.logo_url}
-                            alt={negocio.nombre}
-                            fill
-                            className="object-cover transition-transform group-hover:scale-105"
-                            unoptimized
-                        />
+                        <>
+                            {loadingImage && (
+                                <div className="absolute inset-0 bg-gray-100 dark:bg-zinc-800 animate-pulse z-10" />
+                            )}
+                            <Image
+                                src={resolveImageUrl(negocio.logo_url)}
+                                alt={negocio.nombre}
+                                fill
+                                className={`object-cover transition-all duration-700 ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'} group-hover:scale-110`}
+                                unoptimized
+                                onLoad={() => setLoadingImage(false)}
+                                onError={() => setLoadingImage(false)}
+                            />
+                        </>
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-3xl sm:text-4xl select-none">
                             {config.emoji}

@@ -108,7 +108,24 @@ export function CartSidebar() {
                                             <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">
                                                 {item.nombre_producto}
                                             </h4>
-                                            <div className="flex items-center gap-2 mt-1">
+
+                                            {/* Selected Extras */}
+                                            {item.detalles_seleccionados?.extras_seleccionados?.length > 0 && (
+                                                <div className="mt-0.5 space-y-0.5">
+                                                    {item.detalles_seleccionados.extras_seleccionados.map((group: any, idx: number) => (
+                                                        <div key={idx} className="flex flex-wrap gap-x-1 gap-y-0.5">
+                                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{group.titulo}:</span>
+                                                            {group.seleccion.map((opt: any, sIdx: number) => (
+                                                                <span key={sIdx} className="text-[10px] font-bold text-orange-500/80 dark:text-orange-400/80 bg-orange-500/5 px-1 rounded">
+                                                                    {opt.nombre}{opt.precio > 0 ? ` (+ $${opt.precio})` : ''}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2 mt-1.5">
                                                 <span className="text-xs font-bold text-gray-400">
                                                     x{item.cantidad}{unitShort ? ` ${unitShort}` : ''}
                                                 </span>

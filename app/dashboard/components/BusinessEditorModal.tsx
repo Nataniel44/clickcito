@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, Store, Clock, Truck, Info, CheckCircle2, Upload, ImageIcon, Loader2 } from "lucide-react";
+import { X, Save, Store, Clock, Truck, Info, CheckCircle2, Upload, ImageIcon, Loader2, Globe, MapPin, Star, Settings2 } from "lucide-react";
 import Image from "next/image";
 import { updateNegocio } from "@/app/firebase/db";
 import { uploadLogoAction, uploadProductImageAction } from "@/app/actions/uploadAction";
@@ -40,9 +40,13 @@ export function BusinessEditorModal({
                     viernes: "Cerrado", sabado: "Cerrado", domingo: "Cerrado"
                 },
                 configuracion_logistica: {
-                    delivery_habilitado: negocio.configuracion_logistica?.delivery_habilitado ?? false,
-                    takeaway_habilitado: negocio.configuracion_logistica?.takeaway_habilitado ?? false,
+                    delivery_habilitado: negocio.configuracion_logistica?.delivery_habilitado ?? true,
+                    takeaway_habilitado: negocio.configuracion_logistica?.takeaway_habilitado ?? true,
                     mesa_habilitado: negocio.configuracion_logistica?.mesa_habilitado ?? false,
+                    // Nuevas opciones para educación
+                    online_habilitado: negocio.configuracion_logistica?.online_habilitado ?? false,
+                    presencial_habilitado: negocio.configuracion_logistica?.presencial_habilitado ?? false,
+                    digital_habilitado: negocio.configuracion_logistica?.digital_habilitado ?? false,
                     precio_delivery: negocio.configuracion_logistica?.precio_delivery ?? 0,
                     delivery_gratis_desde: negocio.configuracion_logistica?.delivery_gratis_desde ?? 0,
                     tiempo_aprox_delivery: negocio.configuracion_logistica?.tiempo_aprox_delivery ?? "",
@@ -199,6 +203,7 @@ export function BusinessEditorModal({
                                                 <option value="gastronomia">Gastronomía</option>
                                                 <option value="retail">Retail / Tienda</option>
                                                 <option value="servicios">Servicios</option>
+                                                <option value="educacion">Educación</option>
                                             </select>
                                         </div>
                                     </div>
@@ -302,6 +307,42 @@ export function BusinessEditorModal({
                                             <span className="text-xs font-black uppercase tracking-widest">En Mesa</span>
                                             <span className="text-[10px] font-bold text-gray-500">{formData.configuracion_logistica.mesa_habilitado ? "Activado" : "Desactivado"}</span>
                                         </button>
+                                    </div>
+
+                                    {/* Nuevas logísticas de Educación */}
+                                    <div className="pt-6 border-t border-gray-50 dark:border-zinc-800">
+                                        <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4 flex items-center gap-2 px-1">
+                                            <Star size={12} fill="currentColor" /> Formatos Educativos
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateLogistics("online_habilitado", !formData.configuracion_logistica.online_habilitado)}
+                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${formData.configuracion_logistica.online_habilitado ? "bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800" : "bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
+                                            >
+                                                <Globe className={formData.configuracion_logistica.online_habilitado ? "text-indigo-600" : "text-gray-400"} />
+                                                <span className="text-xs font-black uppercase tracking-widest text-center">En Vivo / Online</span>
+                                                <span className="text-[10px] font-bold text-gray-500">{formData.configuracion_logistica.online_habilitado ? "Activado" : "Desactivado"}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateLogistics("presencial_habilitado", !formData.configuracion_logistica.presencial_habilitado)}
+                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${formData.configuracion_logistica.presencial_habilitado ? "bg-cyan-50 border-cyan-200 dark:bg-cyan-900/20 dark:border-cyan-800" : "bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
+                                            >
+                                                <MapPin className={formData.configuracion_logistica.presencial_habilitado ? "text-cyan-600" : "text-gray-400"} />
+                                                <span className="text-xs font-black uppercase tracking-widest text-center">Presencial</span>
+                                                <span className="text-[10px] font-bold text-gray-500">{formData.configuracion_logistica.presencial_habilitado ? "Activado" : "Desactivado"}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateLogistics("digital_habilitado", !formData.configuracion_logistica.digital_habilitado)}
+                                                className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${formData.configuracion_logistica.digital_habilitado ? "bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:border-violet-800" : "bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
+                                            >
+                                                <ImageIcon className={formData.configuracion_logistica.digital_habilitado ? "text-violet-600" : "text-gray-400"} />
+                                                <span className="text-xs font-black uppercase tracking-widest text-center">Material Digital</span>
+                                                <span className="text-[10px] font-bold text-gray-500">{formData.configuracion_logistica.digital_habilitado ? "Activado" : "Desactivado"}</span>
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {formData.configuracion_logistica.delivery_habilitado && (
