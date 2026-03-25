@@ -30,6 +30,14 @@ interface Orden {
     reportado?: boolean;
 }
 
+const statusConfig: any = {
+    pendiente: { label: "Pendiente", color: "text-amber-500", bg: "bg-amber-50", icon: Clock },
+    en_preparacion: { label: "Preparando", color: "text-blue-500", bg: "bg-blue-50", icon: PackageCheck },
+    en_camino: { label: "En Camino", color: "text-purple-500", bg: "bg-purple-50", icon: Send },
+    entregado: { label: "Entregado", color: "text-emerald-500", bg: "bg-emerald-50", icon: CheckCircle2 },
+    cancelado: { label: "Cancelado", color: "text-red-500", bg: "bg-red-50", icon: X },
+};
+
 export default function MisPedidosPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
@@ -83,13 +91,6 @@ export default function MisPedidosPage() {
         return items.slice(0, pageSize); // Aplicamos el recorte de UX (paginación visual)
     }, [ordenes, activeFilter, searchTerm, pageSize]);
 
-    const statusConfig: any = {
-        pendiente: { label: "Pendiente", color: "text-amber-500", bg: "bg-amber-50", icon: Clock },
-        en_preparacion: { label: "Preparando", color: "text-blue-500", bg: "bg-blue-50", icon: PackageCheck },
-        en_camino: { label: "En Camino", color: "text-purple-500", bg: "bg-purple-50", icon: Send },
-        entregado: { label: "Entregado", color: "text-emerald-500", bg: "bg-emerald-50", icon: CheckCircle2 },
-        cancelado: { label: "Cancelado", color: "text-red-500", bg: "bg-red-50", icon: X },
-    };
 
     // --- Toasts Personalizados de Actualización ---
     const prevOrdenesRef = useRef<Orden[]>([]);

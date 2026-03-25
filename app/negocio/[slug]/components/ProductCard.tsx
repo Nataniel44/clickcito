@@ -58,7 +58,6 @@ export function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallba
     const hasAccess = !!purchased;
     const unitInfo = useMemo(() => resolveUnit(prod.detalles_especificos), [prod.detalles_especificos]);
     const [qty, setQty] = useState(unitInfo.step);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [animating, setAnimating] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [loadingImage, setLoadingImage] = useState(true);
@@ -66,7 +65,6 @@ export function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallba
     const isAvailable = prod.detalles_especificos?.disponible !== false;
     const canAddToCart = isAvailable && !isClosed;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleAdd = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!canAddToCart) return;
@@ -173,9 +171,12 @@ export function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallba
                     </div>
                 ) : (
                     <>
-                        <div className={`w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 dark:bg-zinc-800 text-gray-400 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white transition-all`}>
-                            <Plus size={16} />
-                        </div>
+                        <button
+                            onClick={handleAdd}
+                            className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${animating ? 'bg-emerald-500 text-white scale-125' : 'bg-gray-50 dark:bg-zinc-800 text-gray-400 group-hover:scale-110 group-hover:bg-orange-500 group-hover:text-white'}`}
+                        >
+                            {animating ? <Check size={16} strokeWidth={4} /> : <Plus size={16} />}
+                        </button>
                     </>
                 )}
             </div>

@@ -124,7 +124,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
             }
         }
         fetchData();
-    }, [slug]);
+    }, [slug, user?.uid]);
 
     useEffect(() => {
         const handleScroll = () => {

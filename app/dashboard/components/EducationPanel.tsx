@@ -7,6 +7,7 @@ import {
     LayoutDashboard, FileText, Users, Download, Upload,
     ExternalLink
 } from "lucide-react";
+import Image from "next/image";
 import { ProductModal } from "./ProductModal";
 
 export function EducationPanel({
@@ -179,9 +180,10 @@ export function EducationPanel({
                             >
                                 {/* Course Image */}
                                 <div className="relative h-48 overflow-hidden">
-                                    <img
+                                    <Image
                                         src={curso.imagen_url || curso.imagen || "/placeholder-course.jpg"}
                                         alt={curso.nombre || curso.nombre_producto}
+                                        fill
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
