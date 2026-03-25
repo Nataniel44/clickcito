@@ -42,7 +42,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
             const group = extras[Number(groupIdx)];
             if (group) {
                 selectedNames.forEach(name => {
-                    const option = group.opciones.find((o: any) => o.nombre === name);
+                    const option = (group.opciones || []).find((o: any) => o.nombre === name);
                     if (option) extrasTotal += Number(option.precio) || 0;
                 });
             }
@@ -73,7 +73,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
             return {
                 titulo: group.titulo,
                 seleccion: names.map(name => {
-                    const opt = group.opciones.find((o: any) => o.nombre === name);
+                    const opt = (group.opciones || []).find((o: any) => o.nombre === name);
                     return { nombre: name, precio: opt?.precio || 0 };
                 })
             };
@@ -186,7 +186,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
                                         )}
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
-                                        {group.opciones.map((opt: any, oIdx: number) => {
+                                        {(group.opciones || []).map((opt: any, oIdx: number) => {
                                             const isSelected = selectedExtras[gIdx]?.includes(opt.nombre);
                                             return (
                                                 <button
