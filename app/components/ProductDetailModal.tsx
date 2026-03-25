@@ -31,7 +31,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
         return () => { document.body.style.overflow = "auto"; };
     }, [isOpen]);
 
-    const extras = product?.detalles_especificos?.extras || [];
+    const extras = useMemo(() => product?.detalles_especificos?.extras || [], [product]);
 
     const totalPrice = useMemo(() => {
         if (!product) return 0;
@@ -161,7 +161,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
                             <div className="mb-10 max-w-xl">
                                 <h4 className="lg:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Descripción</h4>
                                 <p className="text-gray-500 dark:text-zinc-400 text-base leading-relaxed italic">
-                                    "{product.descripcion}"
+                                    &quot;{product.descripcion}&quot;
                                 </p>
                             </div>
                         )}
