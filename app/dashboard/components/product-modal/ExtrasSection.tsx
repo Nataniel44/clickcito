@@ -101,13 +101,14 @@ export const ExtrasSection: React.FC<ExtrasSectionProps> = ({
                             </div>
 
                             <div className="space-y-2 mt-2">
-                                {extra.opciones.map((opc: any, oIdx: number) => (
+                                {(extra.opciones || []).map((opc: any, oIdx: number) => (
                                     <div key={oIdx} className="flex gap-2 items-center bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-gray-100 dark:border-zinc-800 group shadow-sm">
                                         <input
                                             type="text"
                                             value={opc.nombre}
                                             onChange={(e) => {
                                                 const newExtras = [...formData.extras];
+                                                if (!newExtras[eIdx].opciones) newExtras[eIdx].opciones = [];
                                                 newExtras[eIdx].opciones[oIdx].nombre = e.target.value;
                                                 setFormData({ ...formData, extras: newExtras });
                                             }}
@@ -121,6 +122,7 @@ export const ExtrasSection: React.FC<ExtrasSectionProps> = ({
                                                 value={opc.precio}
                                                 onChange={(e) => {
                                                     const newExtras = [...formData.extras];
+                                                    if (!newExtras[eIdx].opciones) newExtras[eIdx].opciones = [];
                                                     newExtras[eIdx].opciones[oIdx].precio = parseFloat(e.target.value);
                                                     setFormData({ ...formData, extras: newExtras });
                                                 }}
@@ -132,6 +134,7 @@ export const ExtrasSection: React.FC<ExtrasSectionProps> = ({
                                             type="button"
                                             onClick={() => {
                                                 const newExtras = [...formData.extras];
+                                                if (!newExtras[eIdx].opciones) newExtras[eIdx].opciones = [];
                                                 newExtras[eIdx].opciones.splice(oIdx, 1);
                                                 setFormData({ ...formData, extras: newExtras });
                                             }}
@@ -145,6 +148,7 @@ export const ExtrasSection: React.FC<ExtrasSectionProps> = ({
                                     type="button"
                                     onClick={() => {
                                         const newExtras = [...formData.extras];
+                                        if (!newExtras[eIdx].opciones) newExtras[eIdx].opciones = [];
                                         newExtras[eIdx].opciones.push({ nombre: "", precio: 0 });
                                         setFormData({ ...formData, extras: newExtras });
                                     }}

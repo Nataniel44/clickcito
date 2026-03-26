@@ -8,6 +8,7 @@ import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { uploadProductImageAction, uploadFileAction } from "@/app/actions/uploadAction";
 import Image from "next/image";
+import { compressImage } from "@/lib/compressImage";
 
 // Import sub-components
 import { ModalHeader } from "./product-modal/ModalHeader";
@@ -152,16 +153,18 @@ export function ProductModal({
         try {
             let uploadedUrl = formData.imagen_url;
             if (imageFile) {
+                const compressed = await compressImage(imageFile);
                 const uploadFormData = new FormData();
-                uploadFormData.append("file", imageFile);
+                uploadFormData.append("file", compressed);
                 uploadedUrl = await uploadProductImageAction(uploadFormData);
             }
 
             const finalRecursos = await Promise.all(
                 formData.recursos.map(async (rec) => {
                     if (rec.file) {
+                        const compressed = await compressImage(rec.file);
                         const recFormData = new FormData();
-                        recFormData.append("file", rec.file);
+                        recFormData.append("file", compressed);
                         const url = await uploadFileAction(recFormData);
                         return { nombre: rec.nombre, url };
                     }
@@ -178,8 +181,9 @@ export function ProductModal({
                             recursos: await Promise.all(
                                 (clase.recursos || []).map(async (rec) => {
                                     if (rec.file) {
+                                        const compressed = await compressImage(rec.file);
                                         const recFormData = new FormData();
-                                        recFormData.append("file", rec.file);
+                                        recFormData.append("file", compressed);
                                         const url = await uploadFileAction(recFormData);
                                         return { nombre: rec.nombre, url };
                                     }
@@ -232,9 +236,14 @@ export function ProductModal({
             }
 
             onClose();
-        } catch (error) {
-            console.error(error);
-            toast.error(isEditing ? "Error al actualizar el producto" : "Error al agregar el producto");
+        } catch (error: any) {
+            console.error("DEBUG: Error en handleSubmit de ProductModal:", error);
+            const msg = error.message || "";
+            if (msg.includes("Payload Too Large")) {
+                toast.error("La imagen es demasiado pesada, intenta con una más pequeña.");
+            } else {
+                toast.error(isEditing ? "Error al actualizar el producto" : "Error al agregar el producto");
+            }
         } finally {
             setLoading(false);
         }

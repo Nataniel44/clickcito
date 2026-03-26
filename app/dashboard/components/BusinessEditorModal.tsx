@@ -6,6 +6,7 @@ import Image from "next/image";
 import { updateNegocio } from "@/app/firebase/db";
 import { uploadLogoAction, uploadProductImageAction } from "@/app/actions/uploadAction";
 import toast from "react-hot-toast";
+import { compressImage } from "@/lib/compressImage";
 
 const DAYS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
 
@@ -96,8 +97,9 @@ export function BusinessEditorModal({
 
         const loadingToast = toast.loading("Subiendo logo...");
         try {
+            const compressed = await compressImage(file);
             const formDataUpload = new FormData();
-            formDataUpload.append("file", file);
+            formDataUpload.append("file", compressed);
             const url = await uploadLogoAction(formDataUpload);
             setFormData({ ...formData, logo_url: url });
             toast.success("Logo subido!", { id: loadingToast });
@@ -113,8 +115,9 @@ export function BusinessEditorModal({
 
         const loadingToast = toast.loading("Subiendo a galería...");
         try {
+            const compressed = await compressImage(file);
             const formDataUpload = new FormData();
-            formDataUpload.append("file", file);
+            formDataUpload.append("file", compressed);
             // Reutilizamos el de productos o creamos uno para galeria?
             // Según uploadAction.ts, uploadProductImageAction sube a "productos". 
             // Quizás convenga agregar uno general en uploadAction.ts
