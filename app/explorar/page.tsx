@@ -15,6 +15,7 @@ import { EmptyResults } from "@/components/explorar/EmptyResults";
 import { ExternalBusinessCard } from "@/components/explorar/ExternalBusinessCard";
 import { getNearbyBusinesses, OSMBusiness, searchLocation, reverseGeocode } from "@/app/utils/osm";
 import { FooterCTA } from "@/components/explorar/FooterCTA";
+import { isBusinessOpen } from "@/app/utils/businessUtils";
 
 // Helper para distancia (KM)
 const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -38,6 +39,7 @@ export default function ExplorarPage() {
     const [externalBiz, setExternalBiz] = useState<OSMBusiness[]>([]);
     const [loadingExternal, setLoadingExternal] = useState(false);
     const [locationName, setLocationName] = useState<string>("");
+    const [onlyOpen, setOnlyOpen] = useState(false);
 
     useEffect(() => {
         async function fetchNegocios() {
@@ -174,6 +176,7 @@ export default function ExplorarPage() {
         setActiveRubro("todos");
         setUserLocation(null);
         setLocationName("");
+        setOnlyOpen(false);
     };
 
     const filtered = useMemo(() => {
@@ -183,7 +186,8 @@ export default function ExplorarPage() {
             const locSearch = n.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
             const match = nameSearch || descSearch || locSearch;
             const rubroMatch = activeRubro === "todos" || n.rubro === activeRubro;
-            return match && rubroMatch;
+            const openMatch = !onlyOpen || isBusinessOpen(n.horarios);
+            return match && rubroMatch && openMatch;
         }).map(n => {
             let distance: number | undefined;
             if (userLocation && n.coordenadas) {
@@ -208,7 +212,7 @@ export default function ExplorarPage() {
             });
         }
         return result;
-    }, [negocios, searchTerm, activeRubro, userLocation]);
+    }, [negocios, searchTerm, activeRubro, userLocation, onlyOpen]);
 
     // Agrupación por rubros
     const negociosPorRubro = useMemo(() => {
@@ -251,29 +255,6 @@ export default function ExplorarPage() {
                     locationName={locationName}
                 />
 
-                {/* Featured Sections (Only for 'Todos' and no active search) */}
-                {activeRubro === "todos" && !searchTerm && !userLocation && (
-                    <div className="space-y-12 animate-fade-in mb-10">
-                        {/* Recomendados */}
-                        <SectionCarousel
-                            title="Seleccionados para vos"
-                            icon="✨"
-                            subtitle="Los mejores negocios de la zona"
-                            negocios={negocios.slice(0, 8)}
-                        />
-
-                        {/* Tendencias */}
-                        {negocios.length > 3 && (
-                            <SectionCarousel
-                                title="En tendencia"
-                                icon="🔥"
-                                subtitle="Lo más elegido por la comunidad esta semana"
-                                negocios={negocios.slice().reverse().slice(0, 8)}
-                            />
-                        )}
-
-                    </div>
-                )}
 
                 <div ref={resultsRef} className="animate-fade-in max-w-5xl mx-auto">
                     <div className="flex flex-col gap-6">
@@ -300,37 +281,55 @@ export default function ExplorarPage() {
                                 {/* Category Search Filter - Compact horizontal scroll */}
                                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
                                     <button
-                                        onClick={() => setActiveRubro("todos")}
-                                        className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === "todos"
-                                            ? "bg-orange-600 text-white border-orange-600"
+                                        onClick={(e) => {
+                                            setOnlyOpen(!onlyOpen);
+                                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                        }}
+                                        className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 ${onlyOpen
+                                            ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/10 active:scale-95"
+                                            : "bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800 text-gray-500 hover:text-orange-600 hover:border-orange-200"}`}
+                                    >
+                                        {onlyOpen ? "✓ Abiertos" : "Abiertos ahora"}
+                                    </button>
+
+                                    {userLocation && (
+                                        <button
+                                            onClick={(e) => e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })}
+                                            className="px-4 py-2 bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-600 dark:text-green-500 rounded-xl text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm shrink-0"
+                                        >
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                            Cerca de mí
+                                        </button>
+                                    )}
+
+                                    <div className="w-[1px] h-4 bg-gray-100 dark:bg-zinc-800 shrink-0 mx-1" />
+
+                                    <button
+                                        onClick={(e) => {
+                                            setActiveRubro("todos");
+                                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                        }}
+                                        className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 ${activeRubro === "todos"
+                                            ? "bg-orange-600 text-white border-orange-600 active:scale-95"
                                             : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700"}`}
                                     >
                                         Todos
                                     </button>
+
                                     {Object.entries(RUBRO_CONFIG).filter(([k]) => k !== "default").map(([key, config]) => (
                                         <button
                                             key={key}
-                                            onClick={() => setActiveRubro(key)}
-                                            className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border ${activeRubro === key
-                                                ? "bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-500/10"
+                                            onClick={(e) => {
+                                                setActiveRubro(key);
+                                                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                            }}
+                                            className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap shadow-sm border shrink-0 ${activeRubro === key
+                                                ? "bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-500/10 active:scale-95"
                                                 : "bg-white dark:bg-zinc-900 text-gray-500 border-gray-100 dark:border-zinc-800 hover:border-gray-300 dark:hover:border-zinc-700"}`}
                                         >
                                             {config.label}
                                         </button>
                                     ))}
-                                    <div className="w-[1px] h-4 bg-gray-100 dark:bg-zinc-800 shrink-0 mx-1" />
-                                    <button
-                                        onClick={() => { }}
-                                        className="px-4 py-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-xl text-[11px] font-bold text-gray-500 hover:text-orange-600 hover:border-orange-200 transition-all whitespace-nowrap shadow-sm"
-                                    >
-                                        Abiertos ahora
-                                    </button>
-                                    {userLocation && (
-                                        <div className="px-4 py-2 bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-600 dark:text-green-500 rounded-xl text-[11px] font-bold whitespace-nowrap flex items-center gap-1.5 shadow-sm">
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                            Cerca de mí
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>

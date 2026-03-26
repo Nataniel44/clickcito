@@ -1,6 +1,7 @@
 "use client";
 
 import { ShoppingBag, MessageCircle } from "lucide-react";
+import { useEffect } from "react";
 import { ProductCard } from "./ProductCard";
 
 interface ProductListSectionProps {
@@ -40,6 +41,16 @@ export function ProductListSection({
     categoryNavRef,
     categoryRefs
 }: ProductListSectionProps) {
+    // Auto-scroll the category nav to center the active category
+    useEffect(() => {
+        if (activeCategory && categoryNavRef.current) {
+            const activeBtn = categoryNavRef.current.querySelector(`[data-category="${activeCategory}"]`);
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
+    }, [activeCategory, categoryNavRef]);
+
     return (
         <div className="flex flex-col gap-4">
             {/* Catalog Label */}
@@ -63,10 +74,14 @@ export function ProductListSection({
                                 {categoriasOrdenadas.map((tipo) => (
                                     <button
                                         key={tipo}
-                                        onClick={() => onScrollToCategory(tipo)}
+                                        data-category={tipo}
+                                        onClick={(e) => {
+                                            onScrollToCategory(tipo);
+                                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                                        }}
                                         className={`snap-center shrink-0 px-4 py-1.5 rounded-full text-[13px] font-bold transition-all border ${activeCategory === tipo
-                                            ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white shadow-md'
-                                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-900 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:bg-zinc-800'
+                                            ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white shadow-md scale-105'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-900 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500'
                                             }`}
                                     >
                                         {tipo}
