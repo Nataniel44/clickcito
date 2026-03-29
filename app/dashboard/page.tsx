@@ -156,10 +156,11 @@ export default function DashboardPage() {
         return () => unsub();
     }, [user, managedBusinessId]);
 
-    // ═══════ ELYS PRODUCTS LIVE (admin only) ═══════
+    // ═══════ ELYS PRODUCTS LIVE (admin + elys owner) ═══════
     useEffect(() => {
         const isAdmin = user?.rol === "admin_clickcito" || user?.rol === "admin";
-        if (!isAdmin) return;
+        const isElysOwner = user?.id_negocio === "elysrestobar";
+        if (!isAdmin && !isElysOwner) return;
         const q = query(collection(db, "productos_catalogo"), where("id_negocio", "==", "elysrestobar"));
         const unsub = onSnapshot(q, (snap) => {
             setElysProductos(snap.docs.map(d => ({ id_producto: d.id, ...d.data() })));
@@ -746,7 +747,14 @@ export default function DashboardPage() {
         ),
     };
 
-    const ALL_SIDEBAR_ITEMS = [...BASE_SIDEBAR_ITEMS, ...(user?.rol === "admin_clickcito" || user?.rol === "admin" ? ADMIN_SIDEBAR_ITEMS : [])];
+    const isAdmin = user?.rol === "admin_clickcito" || user?.rol === "admin";
+    const isElysOwner = user?.id_negocio === "elysrestobar";
+    const ELYS_ONLY_ITEM = ADMIN_SIDEBAR_ITEMS.find(i => i.id === "productos_elys");
+    const ALL_SIDEBAR_ITEMS = [
+        ...BASE_SIDEBAR_ITEMS,
+        ...(isAdmin ? ADMIN_SIDEBAR_ITEMS : []),
+        ...(!isAdmin && isElysOwner && ELYS_ONLY_ITEM ? [ELYS_ONLY_ITEM] : []),
+    ];
     const tabLabel = ALL_SIDEBAR_ITEMS.find(i => i.id === activeTab)?.label || "Dashboard";
 
     return (
