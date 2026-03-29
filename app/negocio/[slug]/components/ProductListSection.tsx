@@ -43,12 +43,18 @@ export function ProductListSection({
 }: ProductListSectionProps) {
     // Auto-scroll the category nav to center the active category
     useEffect(() => {
-        if (activeCategory && categoryNavRef.current) {
-            const activeBtn = categoryNavRef.current.querySelector(`[data-category="${activeCategory}"]`);
-            if (activeBtn) {
-                activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-            }
-        }
+        if (!activeCategory || !categoryNavRef.current) return;
+
+        const nav = categoryNavRef.current;
+        const activeBtn = nav.querySelector<HTMLElement>(`[data-category="${activeCategory}"]`);
+        if (!activeBtn) return;
+
+        // Centrar el botón activo en el scroll horizontal del contenedor
+        const navRect = nav.getBoundingClientRect();
+        const btnCenter = activeBtn.offsetLeft + activeBtn.offsetWidth / 2;
+        const targetScroll = btnCenter - navRect.width / 2;
+
+        nav.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
     }, [activeCategory, categoryNavRef]);
 
     return (
@@ -75,10 +81,7 @@ export function ProductListSection({
                                     <button
                                         key={tipo}
                                         data-category={tipo}
-                                        onClick={(e) => {
-                                            onScrollToCategory(tipo);
-                                            e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                                        }}
+                                        onClick={() => onScrollToCategory(tipo)}
                                         className={`snap-center shrink-0 px-4 py-1.5 rounded-full text-[13px] font-bold transition-all border ${activeCategory === tipo
                                             ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white shadow-md scale-105'
                                             : 'bg-white text-gray-500 border-gray-200 hover:border-gray-900 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500'
@@ -98,7 +101,7 @@ export function ProductListSection({
                                 key={tipo}
                                 id={tipo}
                                 ref={(el) => { if (categoryRefs.current) categoryRefs.current[tipo] = el; }}
-                                className="scroll-mt-32 pb-4"
+                                className="scroll-mt-[120px] pb-4"
                             >
                                 {Object.keys(productosPorTipo).length > 1 && (
                                     <div className="flex items-center gap-2 mb-3 px-1 mt-4">

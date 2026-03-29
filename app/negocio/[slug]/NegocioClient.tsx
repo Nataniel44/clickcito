@@ -178,43 +178,72 @@ export default function NegocioClient({ slug }: { slug: string }) {
     }, [categoriasOrdenadas, activeCategory]);
 
     const isAutoScrolling = useRef(false);
+    const activeCategoryRef = useRef(activeCategory);
+    useEffect(() => { activeCategoryRef.current = activeCategory; }, [activeCategory]);
 
+    // Scroll-based category detection (replaces IntersectionObserver)
     useEffect(() => {
         if (Object.keys(categoryRefs.current).length === 0) return;
 
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (isAutoScrolling.current) return;
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        setActiveCategory(entry.target.id);
-                    }
-                });
-            },
-            { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
-        );
+        const handleCategoryScroll = () => {
+            if (isAutoScrolling.current) return;
 
-        Object.values(categoryRefs.current).forEach((ref) => {
-            if (ref) observer.observe(ref);
-        });
+            const scrollY = window.scrollY;
+            // Offset: compact header (64px) + sticky bar (~52px) ≈ 116-120px when scrolled
+            // When not scrolled: main navbar (75px) + compact header area + bar ≈ 195px
+            const stickyOffset = scrollY > 140 ? 120 : 195;
 
-        return () => observer.disconnect();
-    }, [productosPorTipo]);
+            let closest = "";
+            let closestDist = Infinity;
+
+            for (const tipo of categoriasOrdenadas) {
+                const el = categoryRefs.current[tipo];
+                if (!el) continue;
+                const rect = el.getBoundingClientRect();
+                const dist = rect.top - stickyOffset;
+                // We want the section whose top is just above or at the sticky bar
+                if (dist <= 20 && Math.abs(dist) < closestDist) {
+                    closest = tipo;
+                    closestDist = Math.abs(dist);
+                }
+            }
+
+            // If no section is above the bar, pick the first one (user scrolled back to top)
+            if (!closest && categoriasOrdenadas.length > 0) {
+                const first = categoryRefs.current[categoriasOrdenadas[0]];
+                if (first && first.getBoundingClientRect().top > stickyOffset) {
+                    closest = categoriasOrdenadas[0];
+                }
+            }
+
+            if (closest && closest !== activeCategoryRef.current) {
+                activeCategoryRef.current = closest;
+                setActiveCategory(closest);
+            }
+        };
+
+        window.addEventListener("scroll", handleCategoryScroll, { passive: true });
+        // Run once on mount
+        handleCategoryScroll();
+
+        return () => window.removeEventListener("scroll", handleCategoryScroll);
+    }, [categoriasOrdenadas, productosPorTipo]);
 
     const scrollToCategory = (tipo: string) => {
         const element = categoryRefs.current[tipo];
         if (element) {
             isAutoScrolling.current = true;
             setActiveCategory(tipo);
-            const currentY = window.scrollY;
-            const targetY = element.getBoundingClientRect().top + currentY;
-            const isScrollingUp = targetY < currentY;
-            const offset = isScrollingUp ? 139 : 64;
-            window.scrollTo({ top: targetY - offset, behavior: 'smooth' });
+            const rect = element.getBoundingClientRect();
+            const scrollY = window.scrollY;
+            // Offset matches the sticky bar position: compact header (64px) + category bar (~52px) + gap
+            const offset = 120;
+            const targetY = rect.top + scrollY - offset;
+            window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
 
             setTimeout(() => {
                 isAutoScrolling.current = false;
-            }, 800);
+            }, 600);
         }
     };
 
