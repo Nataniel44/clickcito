@@ -168,7 +168,10 @@ export function ProductsPanel({
     const productosAgrupados = React.useMemo(() => {
         const groups: Record<string, any[]> = {};
         productos.forEach(p => {
-            const cat = p.categoria_producto || p.detalles_especificos?.tipo || "General";
+            let cat = p.categoria_producto || p.detalles_especificos?.tipo || "General";
+            if (p.id_negocio === "elysrestobar" && p.categoria_producto && p.detalles_especificos?.tipo) {
+                cat = `${p.categoria_producto} - ${p.detalles_especificos.tipo}`;
+            }
             if (!groups[cat]) groups[cat] = [];
             groups[cat].push(p);
         });
@@ -179,7 +182,9 @@ export function ProductsPanel({
                 const orderA = a.orden ?? 9999;
                 const orderB = b.orden ?? 9999;
                 if (orderA !== orderB) return orderA - orderB;
-                return a.nombre_producto.localeCompare(b.nombre_producto);
+                const nameA = a.nombre_producto || a.nombre || "";
+                const nameB = b.nombre_producto || b.nombre || "";
+                return nameA.localeCompare(nameB);
             });
         });
 
@@ -205,11 +210,12 @@ export function ProductsPanel({
         return agruped;
     }, [productosAgrupados, negocioData?.orden_categorias]);
 
-    const categoriesList = ["Todas", ...orderedKeys];
+    const uniqueMainCats = Array.from(new Set(orderedKeys.map(k => k.includes(' - ') ? k.split(' - ')[0] : k)));
+    const categoriesList = ["Todas", ...uniqueMainCats];
 
     const categoriesToRender = selectedCategory === "Todas"
         ? orderedKeys.map(k => [k, productosAgrupados[k]])
-        : [[selectedCategory, productosAgrupados[selectedCategory]]];
+        : orderedKeys.filter(k => (k.includes(' - ') ? k.split(' - ')[0] : k) === selectedCategory).map(k => [k, productosAgrupados[k]]);
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -276,7 +282,7 @@ export function ProductsPanel({
                             {categoriesToRender.map(([categoria, lista]: any) => (
                                 <div key={categoria} className="space-y-3">
                                     <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest px-2 sticky top-[60px] md:top-20 z-10 bg-[#f4f4f5]/90 dark:bg-zinc-950/90 backdrop-blur-md py-2 -mx-2 mb-2 rounded-lg flex justify-between items-center">
-                                        <span>{categoria} <span className="opacity-50">({lista.length})</span></span>
+                                        <span>{categoria.includes(' - ') ? categoria.split(' - ')[1] : categoria} <span className="opacity-50">({lista.length})</span></span>
                                         <button onClick={() => setProductOrderModalState({ isOpen: true, categoria, lista })} className="text-orange-600 hover:text-orange-700 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-lg text-xs font-bold leading-none capitalize flex gap-1 items-center">
                                             <SlidersHorizontal size={12} /> Ordenar Productos
                                         </button>
@@ -294,9 +300,9 @@ export function ProductsPanel({
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="font-bold text-sm truncate">{p.nombre_producto}</h4>
+                                                        <h4 className="font-bold text-sm truncate">{p.nombre_producto || p.nombre || "Sin nombre"}</h4>
                                                         <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-xs font-black text-orange-600">${Number(p.precio_base).toLocaleString('es-AR')}</span>
+                                                            <span className="text-xs font-black text-orange-600">${Number(p.precio_base || p.precio || 0).toLocaleString('es-AR')}</span>
                                                             {p.detalles_especificos?.unidad_medida && (
                                                                 <span className="text-[10px] font-bold text-gray-400">/{p.detalles_especificos.unidad_medida}</span>
                                                             )}
@@ -316,8 +322,8 @@ export function ProductsPanel({
                                                 </div>
                                             ) : (
                                                 <div key={p.id_producto} className="flex items-center gap-2 bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-full pl-4 pr-1.5 py-1.5 hover:shadow-md transition-shadow animate-in fade-in duration-300 w-fit">
-                                                    <span className="font-bold text-xs truncate max-w-[150px]">{p.nombre_producto}</span>
-                                                    <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full">${Number(p.precio_base).toLocaleString('es-AR')}</span>
+                                                    <span className="font-bold text-xs truncate max-w-[150px]">{p.nombre_producto || p.nombre || "Sin nombre"}</span>
+                                                    <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full">${Number(p.precio_base || p.precio || 0).toLocaleString('es-AR')}</span>
                                                     <div className="flex gap-0.5 ml-1 border-l pl-1.5 border-gray-100 dark:border-zinc-800">
                                                         <button onClick={() => handleOpenEdit(p)} className="p-1.5 text-gray-400 hover:text-indigo-600 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Editar producto"><Edit size={12} /></button>
                                                         <button onClick={() => handleDeleteProducto(p.id_producto)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors" title="Eliminar producto"><Trash2 size={12} /></button>

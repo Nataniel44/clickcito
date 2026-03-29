@@ -25,6 +25,7 @@ import { OrderModal } from "./components/OrderModal";
 import { OrderRow } from "./components/OrderRow";
 import { EducationPanel } from "./components/EducationPanel";
 import { BASE_SIDEBAR_ITEMS, ADMIN_SIDEBAR_ITEMS } from "./components/constants";
+import { ElysProductsPanel } from "./components/ElysProductsPanel";
 
 export default function DashboardPage() {
     const { user, loading } = useAuth();
@@ -53,6 +54,9 @@ export default function DashboardPage() {
     const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
     const [managedBusinessId, setManagedBusinessId] = useState<string | null>(null);
     const [managedBusinessData, setManagedBusinessData] = useState<any | null>(null);
+    const [elysProductos, setElysProductos] = useState<any[]>([]);
+    const [loadingElysProductos, setLoadingElysProductos] = useState(true);
+    const [elysNegocioData, setElysNegocioData] = useState<any | null>(null);
     const isInitialLoad = useRef(true);
 
     // ═══════ AUTH GUARD ═══════
@@ -151,6 +155,22 @@ export default function DashboardPage() {
 
         return () => unsub();
     }, [user, managedBusinessId]);
+
+    // ═══════ ELYS PRODUCTS LIVE (admin only) ═══════
+    useEffect(() => {
+        const isAdmin = user?.rol === "admin_clickcito" || user?.rol === "admin";
+        if (!isAdmin) return;
+        const q = query(collection(db, "productos_catalogo"), where("id_negocio", "==", "elysrestobar"));
+        const unsub = onSnapshot(q, (snap) => {
+            setElysProductos(snap.docs.map(d => ({ id_producto: d.id, ...d.data() })));
+            setLoadingElysProductos(false);
+        }, () => setLoadingElysProductos(false));
+        const docRef = doc(db, "negocios", "elysrestobar");
+        const unsubNegocio = onSnapshot(docRef, (snap) => {
+            if (snap.exists()) setElysNegocioData({ id: snap.id, ...snap.data() });
+        });
+        return () => { unsub(); unsubNegocio(); };
+    }, [user]);
 
     // ═══════ ADMIN DATA FETCHING ═══════
     useEffect(() => {
@@ -636,6 +656,13 @@ export default function DashboardPage() {
                 user={user}
                 negocioData={managedBusinessData || negocioData}
                 onStopManaging={managedBusinessId ? () => { setManagedBusinessId(null); setManagedBusinessData(null); } : undefined}
+            />
+        ),
+        productos_elys: () => (
+            <ElysProductsPanel
+                productos={elysProductos}
+                loadingProductos={loadingElysProductos}
+                negocioData={elysNegocioData}
             />
         ),
         clientes: () => (

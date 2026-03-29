@@ -84,7 +84,7 @@ export function ProductListSection({
                                             : 'bg-white text-gray-500 border-gray-200 hover:border-gray-900 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500'
                                             }`}
                                     >
-                                        {tipo}
+                                        {tipo.includes(' - ') ? tipo.split(' - ')[1] : tipo}
                                     </button>
                                 ))}
                             </div>
@@ -102,7 +102,7 @@ export function ProductListSection({
                             >
                                 {Object.keys(productosPorTipo).length > 1 && (
                                     <div className="flex items-center gap-2 mb-3 px-1 mt-4">
-                                        <h3 className="text-[15px] font-black text-gray-900 dark:text-white capitalize tracking-tight">{tipo}</h3>
+                                        <h3 className="text-[15px] font-black text-gray-900 dark:text-white capitalize tracking-tight">{tipo.includes(' - ') ? tipo.split(' - ')[1] : tipo}</h3>
                                         <span className="text-[10px] font-bold bg-gray-100 dark:bg-zinc-800/80 text-gray-400 px-2 py-0.5 rounded-md">{prods.length}</span>
                                     </div>
                                 )}

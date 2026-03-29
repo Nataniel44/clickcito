@@ -147,7 +147,10 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const productosPorTipo = useMemo(() => {
         const grupos: Record<string, any[]> = {};
         productos.forEach(p => {
-            const tipo = p.categoria_producto || p.categorias?.[0] || p.detalles_especificos?.tipo || "General";
+            let tipo = p.categoria_producto || p.categorias?.[0] || p.detalles_especificos?.tipo || "General";
+            if (p.id_negocio === "elysrestobar" && p.categoria_producto && p.detalles_especificos?.tipo) {
+                tipo = `${p.categoria_producto} - ${p.detalles_especificos.tipo}`;
+            }
             if (!grupos[tipo]) grupos[tipo] = [];
             grupos[tipo].push(p);
         });

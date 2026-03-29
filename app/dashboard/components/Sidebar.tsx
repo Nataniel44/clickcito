@@ -30,10 +30,13 @@ export function Sidebar({
     negocio?: any;
 }) {
     const isEducation = negocio?.rubro?.toLowerCase().includes("educacion") || negocio?.rubro?.toLowerCase().includes("academia");
+    const isAdmin = user?.rol === "admin_clickcito" || user?.rol === "admin";
+    const isElys = user?.id_negocio === "elysrestobar" || negocio?.id_negocio === "elysrestobar";
 
     const ALL_SIDEBAR_ITEMS = [
         ...BASE_SIDEBAR_ITEMS,
-        ...(user?.rol === "admin_clickcito" || user?.rol === "admin" ? ADMIN_SIDEBAR_ITEMS : [])
+        ...(isAdmin ? ADMIN_SIDEBAR_ITEMS.filter(i => i.id !== "productos_elys") : []),
+        ...(isAdmin || isElys ? ADMIN_SIDEBAR_ITEMS.filter(i => i.id === "productos_elys") : []),
     ];
 
     return (

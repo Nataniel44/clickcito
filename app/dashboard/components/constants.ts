@@ -1,6 +1,6 @@
 import {
     LayoutDashboard, Search, ShoppingBag, Package, Users, Megaphone, BarChart3, Settings, ShieldCheck, Globe,
-    Clock, PackageCheck, Send, CheckCircle2, XCircle, History, GraduationCap
+    Clock, PackageCheck, Send, CheckCircle2, XCircle, History, GraduationCap, UtensilsCrossed
 } from "lucide-react";
 
 export const BASE_SIDEBAR_ITEMS = [
@@ -25,6 +25,7 @@ export const EXTERNAL_LINKS = [
 
 export const ADMIN_SIDEBAR_ITEMS = [
     { id: "admin_usuarios", icon: ShieldCheck, label: "Panel Admin" },
+    { id: "productos_elys", icon: UtensilsCrossed, label: "Productos Elys" },
 ];
 
 export const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
