@@ -264,11 +264,11 @@ const productos: any[] = [];
 
 // 1. COMIDAS
 menuComidas.entradas.forEach(sub => {
-    sub.items.forEach(item => {
+    sub.items.forEach((item: any) => {
         productos.push({ id_negocio, nombre_producto: item.name, categoria_producto: "Comidas", categorias: ["Comidas", sub.subcategoria], precio_base: item.price || 0, imagen: item.image || "", opciones: item.options ? item.options.map((o: any) => ({ nombre: o.portion, precio: o.price })) : [], descripcion: item.desc || "", estado: "activo", detalles_especificos: { tipo: sub.subcategoria } });
     });
 });
-menuComidas.especialidades.forEach(item => {
+menuComidas.especialidades.forEach((item: any) => {
     productos.push({ id_negocio, nombre_producto: item.name, categoria_producto: "Comidas", categorias: ["Comidas", "Especialidades"], precio_base: item.price || 0, imagen: item.image || "", opciones: item.options ? item.options.map((o: any) => ({ nombre: o.portion, precio: o.price })) : [], descripcion: item.guarniciones ? `Guarniciones: ${item.guarniciones.join(", ")}` : "", estado: "activo", detalles_especificos: { tipo: "Especialidades" } });
 });
 menuComidas.ensaladas.forEach(item => {
