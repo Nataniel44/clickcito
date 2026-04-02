@@ -14,11 +14,11 @@ export async function createPreferenceAction(items: any[], businessAccessToken: 
         });
 
         const preference = new Preference(client);
-        
+
         // Dynamically get host for back_urls
         const headersList = await headers();
-        const host = headersList.get("host") || "localhost:3000";
-        const protocol = headersList.get("x-forwarded-proto") || "http";
+        const host = headersList.get("host") || "clickcito.vercel.app";
+        const protocol = headersList.get("x-forwarded-proto") || "https";
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${protocol}://${host}`;
 
         const body = {
@@ -44,7 +44,7 @@ export async function createPreferenceAction(items: any[], businessAccessToken: 
         };
 
         const response = await preference.create({ body });
-        
+
         return {
             id: response.id,
             init_point: response.init_point
