@@ -18,6 +18,10 @@ export const UNIT_MAP: Record<string, { short: string; long: string; priceTag: s
     'curso': { short: 'curso', long: 'cursos', priceTag: '/curso' },
     'clase': { short: 'clase', long: 'clases', priceTag: '/clase' },
     'modulo': { short: 'mód', long: 'módulos', priceTag: '/mód' },
+    'turno': { short: 'turno', long: 'turnos', priceTag: '/turno' },
+    'hora': { short: 'hs', long: 'horas', priceTag: '/hs' },
+    'sesion': { short: 'sesión', long: 'sesiones', priceTag: '/sesión' },
+    'servicio': { short: 'serv', long: 'servicios', priceTag: '/serv' },
 };
 
 export interface UnitInfo {

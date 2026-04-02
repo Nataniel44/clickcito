@@ -59,7 +59,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const categoryNavRef = useRef<HTMLDivElement>(null);
 
     const lastScrollY = useRef(0);
-    const { addToCart, cart } = useCart();
+    const { addToCart, cart, clearCart } = useCart();
 
     const fotos = negocio?.fotos || [];
 
@@ -250,6 +250,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const isOpen = useMemo(() => {
         if (!negocio) return false;
         if (negocio.activo === false) return false;
+        if (negocio.abierto_siempre) return true;
         if (!negocio.horarios || Object.keys(negocio.horarios).length === 0) return true;
 
         const ahora = new Date();
@@ -294,6 +295,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
             nombre_producto: prod.nombre_producto,
             precio_unitario: Number(prod.precio_base) + extras.reduce((acc, group) => acc + group.seleccion.reduce((sAcc: number, s: any) => sAcc + s.precio, 0), 0),
             cantidad: qty,
+            es_servicio: prod.es_servicio || false,
             detalles_seleccionados: {
                 ...prod.detalles_especificos,
                 extras_seleccionados: extras
@@ -434,6 +436,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
                 accent={accent}
                 isOpen={isOpen}
                 onContinue={() => router.push('/checkout')}
+                onClear={clearCart}
             />
 
             {/* Lightbox / Modals */}

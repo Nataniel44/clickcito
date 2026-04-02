@@ -68,7 +68,12 @@ export function BusinessDetailsSection({
                         )}
                     </div>
                     <div className="flex flex-col gap-1.5">
-                        {negocio.horarios ? diasSemana.map((dia, idx) => {
+                        {negocio.abierto_siempre ? (
+                            <div className="flex flex-col items-center justify-center py-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl border border-emerald-100 dark:border-emerald-600/20">
+                                <span className="text-[13px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Abierto 24hs</span>
+                                <span className="text-[11px] text-emerald-600/70 font-bold mt-0.5">Todos los días, siempre disponible</span>
+                            </div>
+                        ) : negocio.horarios ? diasSemana.map((dia, idx) => {
                             const horario = negocio.horarios[dia.key] || "Cerrado";
                             const isHoy = idx === currentDayIndex;
                             if (horario === "Cerrado" && !isHoy) return null;

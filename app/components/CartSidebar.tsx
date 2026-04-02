@@ -139,7 +139,7 @@ export function CartSidebar() {
                                         {/* Remove */}
                                         <button
                                             onClick={() => removeFromCart(item.cartItemId)}
-                                            className="p-2 text-gray-300 dark:text-zinc-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover/item:opacity-100"
+                                            className="p-2 text-gray-400 dark:text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
                                         >
                                             <Trash2 size={16} />
                                         </button>

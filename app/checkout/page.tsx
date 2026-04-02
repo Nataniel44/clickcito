@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useCart } from "@/app/context/CartContext";
 import { useAuth } from "@/app/context/AuthContext";
 import { createTransaccion, getNegocioById } from "@/app/firebase/db";
+import { createPreferenceAction } from "@/app/actions/mercadopago";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -20,7 +21,7 @@ export default function CheckoutPage() {
     const router = useRouter();
 
     const [negocioInfo, setNegocioInfo] = useState<any>(null);
-    const [entregaMetodo, setEntregaMetodo] = useState<"delivery" | "retiro" | "mesa" | "online" | "presencial" | "digital">("delivery");
+    const [entregaMetodo, setEntregaMetodo] = useState<"delivery" | "retiro" | "mesa" | "online" | "presencial" | "digital" | "servicio">("delivery");
     const [metodoPago, setMetodoPago] = useState<"efectivo" | "transferencia" | "mercadopago">("efectivo");
 
     // Form States
@@ -41,12 +42,13 @@ export default function CheckoutPage() {
                     // Set default delivery method based on availability
                     const logistica = data.configuracion_logistica;
                     if (logistica) {
-                        if (logistica.delivery_habilitado) setEntregaMetodo("delivery");
+                        if (logistica.delivery_habilitado && !isSoloServicios) setEntregaMetodo("delivery");
+                        else if (logistica.servicio_habilitado) setEntregaMetodo("servicio");
                         else if (logistica.online_habilitado) setEntregaMetodo("online");
                         else if (logistica.presencial_habilitado) setEntregaMetodo("presencial");
                         else if (logistica.digital_habilitado) setEntregaMetodo("digital");
-                        else if (logistica.takeaway_habilitado) setEntregaMetodo("retiro");
-                        else if (logistica.mesa_habilitado) setEntregaMetodo("mesa");
+                        else if (logistica.takeaway_habilitado && !isSoloServicios) setEntregaMetodo("retiro");
+                        else if (logistica.mesa_habilitado && !isSoloServicios) setEntregaMetodo("mesa");
                     }
                 }
             });
@@ -62,6 +64,7 @@ export default function CheckoutPage() {
 
     const isOpen = useMemo(() => {
         if (!negocioInfo) return false;
+        if (negocioInfo.abierto_siempre) return true;
         if (!negocioInfo.horarios || Object.keys(negocioInfo.horarios).length === 0) return true;
         const dias = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
         const now = new Date();
@@ -105,13 +108,16 @@ export default function CheckoutPage() {
         );
     }
 
+    const isSoloServicios = cart.every(item => item.es_servicio);
+
     const availableMethods = [
-        { id: 'delivery', label: 'Envío', icon: Truck, enabled: negocioInfo?.configuracion_logistica?.delivery_habilitado ?? true },
-        { id: 'online', label: 'Online', icon: Globe, enabled: negocioInfo?.configuracion_logistica?.online_habilitado ?? false },
-        { id: 'presencial', label: 'Presencial', icon: MapPin, enabled: negocioInfo?.configuracion_logistica?.presencial_habilitado ?? false },
-        { id: 'digital', label: 'Digital', icon: Store, enabled: negocioInfo?.configuracion_logistica?.digital_habilitado ?? false },
-        { id: 'retiro', label: 'Retiro', icon: Store, enabled: negocioInfo?.configuracion_logistica?.takeaway_habilitado ?? true },
-        { id: 'mesa', label: 'Mesa', icon: Armchair, enabled: negocioInfo?.configuracion_logistica?.mesa_habilitado ?? false }
+        { id: 'delivery', label: 'Envío', icon: Truck, enabled: (negocioInfo?.configuracion_logistica?.delivery_habilitado ?? true) && !isSoloServicios },
+        { id: 'servicio', label: 'Servicio', icon: Clock, enabled: (negocioInfo?.configuracion_logistica?.servicio_habilitado ?? false) || (isSoloServicios && (negocioInfo?.configuracion_logistica?.servicio_habilitado ?? true)) },
+        { id: 'online', label: 'Online', icon: Globe, enabled: (negocioInfo?.configuracion_logistica?.online_habilitado ?? false) || (isSoloServicios && (negocioInfo?.configuracion_logistica?.online_habilitado ?? true)) },
+        { id: 'presencial', label: 'Presencial', icon: MapPin, enabled: (negocioInfo?.configuracion_logistica?.presencial_habilitado ?? false) || (isSoloServicios && (negocioInfo?.configuracion_logistica?.presencial_habilitado ?? true)) },
+        { id: 'digital', label: 'Digital', icon: Store, enabled: (negocioInfo?.configuracion_logistica?.digital_habilitado ?? false) || (isSoloServicios && (negocioInfo?.configuracion_logistica?.digital_habilitado ?? true)) },
+        { id: 'retiro', label: 'Retiro', icon: Store, enabled: (negocioInfo?.configuracion_logistica?.takeaway_habilitado ?? true) && !isSoloServicios },
+        { id: 'mesa', label: 'Mesa', icon: Armchair, enabled: (negocioInfo?.configuracion_logistica?.mesa_habilitado ?? false) && !isSoloServicios }
     ].filter(m => m.enabled);
 
     const handleConfirmarPedido = async () => {
@@ -122,7 +128,7 @@ export default function CheckoutPage() {
             toast.error("Datos de envío incompletos");
             return;
         }
-        if ((entregaMetodo === "retiro" || entregaMetodo === "online" || entregaMetodo === "presencial" || entregaMetodo === "digital") && (!nombreCliente || !telefono)) {
+        if ((entregaMetodo === "retiro" || entregaMetodo === "online" || entregaMetodo === "presencial" || entregaMetodo === "digital" || entregaMetodo === "servicio") && (!nombreCliente || !telefono)) {
             toast.error("Datos de contacto incompletos");
             return;
         }
@@ -156,10 +162,37 @@ export default function CheckoutPage() {
                 nro_mesa: nroMesa || "",
                 notas_cliente: notas || "",
                 negocio_nombre: negocioInfo?.nombre || "Negocio",
-                total_pagado: cartTotal
+                total_pagado: cartTotal,
+                estado_pago: metodoPago === 'mercadopago' ? 'pendiente' : 'acordar'
             };
 
             const isOnline = typeof window !== "undefined" ? navigator.onLine : true;
+
+            // Si es Mercado Pago, primero generamos la preferencia
+            if (metodoPago === 'mercadopago') {
+                if (!negocioInfo?.mercado_pago?.access_token) {
+                    throw new Error("Este negocio no tiene configurado Mercado Pago correctamente.");
+                }
+
+                const preference = await createPreferenceAction(
+                    sanitizedCart, 
+                    negocioInfo.mercado_pago.access_token,
+                    negocioInfo.nombre || "Pedido"
+                );
+
+                if (preference.init_point) {
+                    // Guardamos la transacción con referencia al pago
+                    await createTransaccion(idNegocio, user?.uid || "anonimo", sanitizedCart, {
+                        ...metadata,
+                        mercado_pago_id: preference.id
+                    });
+
+                    toast.success("Redirigiendo a Mercado Pago...");
+                    clearCart();
+                    window.location.href = preference.init_point;
+                    return;
+                }
+            }
 
             await createTransaccion(idNegocio, user?.uid || "anonimo", sanitizedCart, metadata);
 
@@ -208,7 +241,7 @@ export default function CheckoutPage() {
                 <div className="bg-white dark:bg-zinc-950 rounded-[2.5rem] shadow-2xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-zinc-900 overflow-hidden">
                     <div className="px-6 py-4 bg-gray-50/50 dark:bg-zinc-900/30 border-b border-gray-100 dark:border-zinc-900 flex items-center gap-2">
                         <div className={`w-8 h-8 rounded-lg ${isEdu ? 'bg-indigo-500/10 text-indigo-600' : 'bg-orange-500/10 text-orange-600'} flex items-center justify-center`}>
-                            {entregaMetodo === 'delivery' ? <Truck size={16} /> : entregaMetodo === 'online' ? <Globe size={16} /> : <MapPin size={16} />}
+                            {entregaMetodo === 'delivery' ? <Truck size={16} /> : (entregaMetodo === 'online' || entregaMetodo === 'servicio') ? <Globe size={16} /> : <MapPin size={16} />}
                         </div>
                         <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Método de entrega</h3>
                     </div>
@@ -272,7 +305,7 @@ export default function CheckoutPage() {
                                     </div>
                                 </>
                             )}
-                            {(entregaMetodo === 'retiro' || entregaMetodo === 'online' || entregaMetodo === 'presencial' || entregaMetodo === 'digital') && (
+                            {(entregaMetodo === 'retiro' || entregaMetodo === 'online' || entregaMetodo === 'presencial' || entregaMetodo === 'digital' || entregaMetodo === 'servicio') && (
                                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                                     {(entregaMetodo === 'retiro' || entregaMetodo === 'presencial') && (
                                         <div className="p-4 rounded-2xl bg-gray-50/80 dark:bg-zinc-900/50 border border-gray-100 dark:border-zinc-800/80 flex items-start gap-4">
@@ -385,7 +418,9 @@ export default function CheckoutPage() {
                         {[
                             { id: 'efectivo', label: 'Efectivo', sub: 'Pagás al recibir su pedido', icon: Banknote, color: 'text-green-500' },
                             { id: 'transferencia', label: 'Transferencia', sub: 'Alias / CVU del negocio', icon: Wallet, color: 'text-blue-500' },
-                            { id: 'mercadopago', label: 'Mercado Pago', sub: 'Link de pago sin comisión', icon: QrCode, color: 'text-sky-500' }
+                            ...(negocioInfo?.mercado_pago?.habilitado ? [
+                                { id: 'mercadopago', label: 'Mercado Pago', sub: 'Link de pago sin comisión', icon: QrCode, color: 'text-sky-500' }
+                            ] : [])
                         ].map((pago) => (
                             <button
                                 key={pago.id}

@@ -67,6 +67,7 @@ export function ProductModal({
         descripcion: "",
         disponible: true,
         sku: "",
+        es_servicio: false,
     });
 
     const isEditing = !!productoParaEditar;
@@ -77,7 +78,7 @@ export function ProductModal({
                 nombre_producto: productoParaEditar.nombre_producto || "",
                 precio_base: productoParaEditar.precio_base?.toString() || "",
                 tipo: productoParaEditar.detalles_especificos?.tipo || "",
-                unidad_medida: productoParaEditar.detalles_especificos?.unidad_medida || "u",
+                unidad_medida: productoParaEditar.detalles_especificos?.unidad_medida || "Unidad",
                 venta_fraccionada: productoParaEditar.detalles_especificos?.venta_fraccionada || false,
                 duracion: productoParaEditar.detalles_especificos?.duracion || "",
                 talles: productoParaEditar.detalles_especificos?.talles || "",
@@ -98,6 +99,7 @@ export function ProductModal({
                 descripcion: productoParaEditar.descripcion || "",
                 disponible: productoParaEditar.detalles_especificos?.disponible !== undefined ? productoParaEditar.detalles_especificos.disponible : true,
                 sku: productoParaEditar.detalles_especificos?.sku || "",
+                es_servicio: productoParaEditar.es_servicio || false,
             });
             setImagePreview(productoParaEditar.imagen_url || productoParaEditar.imagen || null);
             setImageFile(null);
@@ -112,7 +114,7 @@ export function ProductModal({
                 nombre_producto: "",
                 precio_base: "",
                 tipo: "",
-                unidad_medida: "u",
+                unidad_medida: "Unidad",
                 venta_fraccionada: false,
                 duracion: "",
                 talles: "",
@@ -125,6 +127,7 @@ export function ProductModal({
                 descripcion: "",
                 disponible: true,
                 sku: "",
+                es_servicio: false,
             });
             setImagePreview(null);
             setImageFile(null);
@@ -201,7 +204,7 @@ export function ProductModal({
                 imagen_url: uploadedUrl,
                 detalles_especificos: {
                     ...(formData.tipo && { tipo: formData.tipo }),
-                    ...(formData.unidad_medida !== "u" && { unidad_medida: formData.unidad_medida }),
+                    unidad_medida: formData.unidad_medida || "Unidad",
                     ...(formData.venta_fraccionada && { venta_fraccionada: formData.venta_fraccionada }),
                     ...(formData.duracion && { duracion: formData.duracion }),
                     ...(formData.talles && { talles: formData.talles }),
@@ -214,6 +217,7 @@ export function ProductModal({
                     ...(formData.sku && { sku: formData.sku }),
                 },
                 descripcion: formData.descripcion,
+                es_servicio: formData.es_servicio,
             };
 
             if (isEditing) {

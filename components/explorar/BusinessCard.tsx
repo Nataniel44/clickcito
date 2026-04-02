@@ -18,7 +18,9 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
     const todaysHours = negocio.horarios?.[todayKey] || "Cerrado";
 
     const isBusinessCurrentlyOpen = () => {
-        if (negocio.activo === false || todaysHours === "Cerrado") return false;
+        if (negocio.activo === false) return false;
+        if (negocio.abierto_siempre) return true;
+        if (todaysHours === "Cerrado") return false;
 
         const currentTime = ahora.getHours() * 60 + ahora.getMinutes();
 

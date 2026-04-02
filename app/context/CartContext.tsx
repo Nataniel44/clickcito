@@ -12,6 +12,7 @@ export interface CartItem {
     precio_unitario: number; // El precio final calculado con extras antes de mutiplicar por cantidad
     cantidad: number;
     detalles_seleccionados?: any; // Cualquier extra, tamaño o medida
+    es_servicio?: boolean;
 }
 
 interface CartContextType {
@@ -86,6 +87,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
     const clearCart = () => {
         setCart([]);
+        toast.success("Carrito vaciado");
     };
 
     return (

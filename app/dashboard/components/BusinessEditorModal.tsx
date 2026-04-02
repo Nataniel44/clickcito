@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, Store, Clock, Truck, Info, CheckCircle2, Upload, ImageIcon, Loader2, Globe, MapPin, Star, Settings2 } from "lucide-react";
+import { X, Save, Store, Clock, Truck, Info, CheckCircle2, Upload, ImageIcon, Loader2, Globe, MapPin, Star, Settings2, CreditCard } from "lucide-react";
 import Image from "next/image";
 import { updateNegocio } from "@/app/firebase/db";
 import { uploadLogoAction, uploadProductImageAction } from "@/app/actions/uploadAction";
@@ -35,6 +35,7 @@ export function BusinessEditorModal({
                 ubicacion: negocio.ubicacion || "",
                 telefono: negocio.telefono || "",
                 activo: negocio.activo ?? true,
+                abierto_siempre: negocio.abierto_siempre ?? false,
                 logo_url: negocio.logo_url || "",
                 horarios: negocio.horarios || {
                     lunes: "Cerrado", martes: "Cerrado", miercoles: "Cerrado", jueves: "Cerrado",
@@ -48,10 +49,16 @@ export function BusinessEditorModal({
                     online_habilitado: negocio.configuracion_logistica?.online_habilitado ?? false,
                     presencial_habilitado: negocio.configuracion_logistica?.presencial_habilitado ?? false,
                     digital_habilitado: negocio.configuracion_logistica?.digital_habilitado ?? false,
+                    servicio_habilitado: negocio.configuracion_logistica?.servicio_habilitado ?? false,
                     precio_delivery: negocio.configuracion_logistica?.precio_delivery ?? 0,
                     delivery_gratis_desde: negocio.configuracion_logistica?.delivery_gratis_desde ?? 0,
                     tiempo_aprox_delivery: negocio.configuracion_logistica?.tiempo_aprox_delivery ?? "",
                     direccion_retiro_local: negocio.configuracion_logistica?.direccion_retiro_local ?? ""
+                },
+                mercado_pago: {
+                    habilitado: negocio.mercado_pago?.habilitado ?? false,
+                    public_key: negocio.mercado_pago?.public_key || "",
+                    access_token: negocio.mercado_pago?.access_token || ""
                 },
                 fotos: negocio.fotos || []
             });
@@ -73,10 +80,12 @@ export function BusinessEditorModal({
                 ubicacion: formData.ubicacion || "",
                 telefono: formData.telefono || "",
                 activo: formData.activo ?? true,
+                abierto_siempre: formData.abierto_siempre ?? false,
                 logo_url: formData.logo_url || "",
                 fotos: formData.fotos || [],
                 horarios: formData.horarios,
-                configuracion_logistica: formData.configuracion_logistica
+                configuracion_logistica: formData.configuracion_logistica,
+                mercado_pago: formData.mercado_pago
             };
 
             await updateNegocio(negocio.id, safePayload);
@@ -177,7 +186,7 @@ export function BusinessEditorModal({
 
                     {/* Tabs */}
                     <div className="px-8 flex gap-4 border-b border-gray-100 dark:border-zinc-900">
-                        {["general", "horarios", "logistica", "fotos"].map((tab) => (
+                        {["general", "horarios", "logistica", "pagos", "fotos"].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -263,8 +272,20 @@ export function BusinessEditorModal({
 
                             {activeTab === "horarios" && (
                                 <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <p className="text-xs font-bold text-gray-500 px-1 mb-4 flex items-center gap-2"><Clock size={14} /> Configurá los rangos horarios (Ej: 09:00 - 18:00) o poné &quot;Cerrado&quot;.</p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                                        <p className="text-xs font-bold text-gray-500 px-1 flex items-center gap-2"><Clock size={14} /> Configurá los rangos horarios (Ej: 09:00 - 18:00) o poné &quot;Cerrado&quot;.</p>
+                                        <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 rounded-xl">
+                                            <input
+                                                type="checkbox"
+                                                id="abierto-siempre"
+                                                checked={formData.abierto_siempre}
+                                                onChange={e => setFormData({ ...formData, abierto_siempre: e.target.checked })}
+                                                className="w-4 h-4 accent-emerald-600 cursor-pointer"
+                                            />
+                                            <label htmlFor="abierto-siempre" className="text-[11px] font-black text-emerald-900 dark:text-emerald-400 cursor-pointer uppercase tracking-tight">Abierto Siempre</label>
+                                        </div>
+                                    </div>
+                                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 transition-opacity duration-300 ${formData.abierto_siempre ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
                                         {DAYS.map(day => (
                                             <div key={day} className="flex items-center justify-between gap-4 p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-50 dark:border-zinc-800 shadow-sm">
                                                 <label className="text-[10px] font-black uppercase text-gray-400 w-20">{day}</label>
@@ -309,6 +330,15 @@ export function BusinessEditorModal({
                                             <Store className={formData.configuracion_logistica.mesa_habilitado ? "text-emerald-600" : "text-gray-400"} />
                                             <span className="text-xs font-black uppercase tracking-widest">En Mesa</span>
                                             <span className="text-[10px] font-bold text-gray-500">{formData.configuracion_logistica.mesa_habilitado ? "Activado" : "Desactivado"}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => updateLogistics("servicio_habilitado", !formData.configuracion_logistica.servicio_habilitado)}
+                                            className={`p-4 rounded-2xl border flex flex-col items-center gap-2 transition-all ${formData.configuracion_logistica.servicio_habilitado ? "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800" : "bg-white dark:bg-zinc-900 border-gray-100 dark:border-zinc-800"}`}
+                                        >
+                                            <Settings2 className={formData.configuracion_logistica.servicio_habilitado ? "text-purple-600" : "text-gray-400"} />
+                                            <span className="text-xs font-black uppercase tracking-widest">Servicio</span>
+                                            <span className="text-[10px] font-bold text-gray-500">{formData.configuracion_logistica.servicio_habilitado ? "Activado" : "Desactivado"}</span>
                                         </button>
                                     </div>
 
@@ -375,6 +405,60 @@ export function BusinessEditorModal({
                                             </div>
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {activeTab === "pagos" && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                    <div className="flex flex-col gap-1">
+                                        <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                                            <CreditCard className="text-blue-500" size={18} /> Mercado Pago
+                                        </h3>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Cobra con tu propia cuenta de Mercado Pago</p>
+                                    </div>
+
+                                    <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-3xl p-6 space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <input 
+                                                type="checkbox" 
+                                                id="mp-enabled" 
+                                                checked={formData.mercado_pago.habilitado} 
+                                                onChange={e => setFormData({ ...formData, mercado_pago: { ...formData.mercado_pago, habilitado: e.target.checked } })}
+                                                className="w-5 h-5 accent-blue-600"
+                                            />
+                                            <label htmlFor="mp-enabled" className="text-sm font-black text-blue-900 dark:text-blue-400">Activar Pago con Mercado Pago</label>
+                                        </div>
+
+                                        <div className={`space-y-4 transition-all ${formData.mercado_pago.habilitado ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1.5 px-1">Public Key</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={formData.mercado_pago.public_key} 
+                                                    onChange={e => setFormData({ ...formData, mercado_pago: { ...formData.mercado_pago, public_key: e.target.value } })}
+                                                    placeholder="APP_USR-..."
+                                                    className="w-full px-4 py-3 bg-white dark:bg-zinc-950 border border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-mono"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-gray-400 uppercase mb-1.5 px-1">Access Token</label>
+                                                <input 
+                                                    type="password" 
+                                                    value={formData.mercado_pago.access_token} 
+                                                    onChange={e => setFormData({ ...formData, mercado_pago: { ...formData.mercado_pago, access_token: e.target.value } })}
+                                                    placeholder="APP_USR-..."
+                                                    className="w-full px-4 py-3 bg-white dark:bg-zinc-950 border border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-mono"
+                                                />
+                                            </div>
+                                            <div className="flex items-start gap-2 p-3 bg-gray-50 dark:bg-zinc-800 rounded-xl border border-gray-100 dark:border-zinc-700">
+                                                <Info size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                                                <p className="text-[10px] font-bold text-gray-500 leading-relaxed">
+                                                    Obtené tus credenciales de Producción en <a href="https://www.mercadopago.com.ar/developers/panel" target="_blank" className="text-blue-600 underline">Mercado Pago Developers</a>. 
+                                                    Asegurate de usar las de **Producción** para recibir pagos reales.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

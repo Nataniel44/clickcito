@@ -10,6 +10,8 @@ import { updateProducto, deleteProducto, createProducto, updateNegocio } from "@
 import { uploadProductImageAction } from "@/app/actions/uploadAction";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/app/firebase/config";
 
 const ELYS_NEGOCIO_ID = "elysrestobar";
 
@@ -64,6 +66,8 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
         estado: "activo",
         opciones: [] as ElysOpcion[],
         extras: [] as ElysExtraGrupo[],
+        es_servicio: false,
+        unidad_medida: "Unidad",
     });
 
     const [saving, setSaving] = useState(false);
@@ -72,6 +76,7 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
 
     React.useEffect(() => {
         if (isOpen && producto) {
+            const p = producto as any;
             setForm({
                 nombre_producto: producto.nombre_producto || "",
                 categoria_producto: producto.categoria_producto || "Comidas",
@@ -80,19 +85,23 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                 descripcion: producto.descripcion || "",
                 imagen: producto.imagen || "",
                 estado: producto.estado || "activo",
+                es_servicio: p.es_servicio || false,
+                unidad_medida: p.detalles_especificos?.unidad_medida || "Unidad",
                 opciones: (producto.opciones || []).map(o => ({ nombre: o.nombre, precio: o.precio })),
                 extras: (() => {
-                    const p = producto as any;
-                    if (p.detalles_especificos?.extras?.length > 0) {
-                        return p.detalles_especificos.extras.map((g: any) => ({
+                    const inDetalles = p.detalles_especificos?.extras;
+                    const inOpcionesExtras = p.opciones_extras;
+                    
+                    if (inDetalles?.length > 0) {
+                        return inDetalles.map((g: any) => ({
                             titulo: g.titulo || "",
                             tipo: g.tipo || "unica",
                             obligatorio: g.obligatorio || false,
                             opciones: (g.opciones || []).map((o: any) => ({ nombre: o.nombre, precio: o.precio })),
                         }));
                     }
-                    if (p.opciones_extras?.length > 0) {
-                        return [{ titulo: "Extras", tipo: "multiple", obligatorio: false, opciones: p.opciones_extras.map((e: any) => ({ nombre: e.nombre, precio: e.precio })) }];
+                    if (inOpcionesExtras?.length > 0) {
+                        return [{ titulo: "Extras", tipo: "multiple", obligatorio: false, opciones: inOpcionesExtras.map((e: any) => ({ nombre: e.nombre, precio: e.precio })) }];
                     }
                     const desc: string = producto.descripcion || "";
                     const salsaMatch = desc.match(/^Salsas?:\s*(.+)$/i);
@@ -113,7 +122,19 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                 })(),
             });
         } else if (isOpen && !producto) {
-            setForm({ nombre_producto: "", categoria_producto: "Comidas", tipo: "Entradas", precio_base: 0, descripcion: "", imagen: "", estado: "activo", opciones: [], extras: [] });
+            setForm({ 
+                nombre_producto: "", 
+                categoria_producto: "Comidas", 
+                tipo: "Entradas", 
+                precio_base: 0, 
+                descripcion: "", 
+                imagen: "", 
+                estado: "activo", 
+                es_servicio: false,
+                unidad_medida: "Unidad",
+                opciones: [], 
+                extras: [] 
+            });
         }
     }, [isOpen, producto]);
 
@@ -160,8 +181,25 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
 
     const handleSave = async () => {
         if (!form.nombre_producto.trim()) { toast.error("El nombre es obligatorio"); return; }
+        
+        for (let i = 0; i < form.extras.length; i++) {
+            const g = form.extras[i];
+            const opcionesConNombre = g.opciones.filter((o: any) => o.nombre.trim());
+            if (opcionesConNombre.length > 0 && !g.titulo.trim()) {
+                toast.error(`El grupo de extras en la posición ${i + 1} necesita un título (ej: Salsas)`);
+                return;
+            }
+            for (let j = 0; j < g.opciones.length; j++) {
+                if (!g.opciones[j].nombre.trim()) {
+                    toast.error(`Falta nombre en "${g.titulo || `grupo ${i + 1}`}" - opción ${j + 1}`);
+                    return;
+                }
+            }
+        }
+        
         setSaving(true);
         try {
+            // Limpiar y estructurar extras
             const cleanExtras = form.extras
                 .filter((g: any) => g.titulo.trim())
                 .map((g: any) => ({
@@ -172,36 +210,50 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                 }))
                 .filter((g: any) => g.opciones.length > 0);
 
-            let descripcion = form.descripcion.trim();
-            const hasSalsasExtra = cleanExtras.some((g: any) => g.titulo.toLowerCase() === "salsas");
-            if (hasSalsasExtra && /^salsas?:\s*/i.test(descripcion)) {
-                descripcion = descripcion.replace(/^salsas?:\s*.+$/i, "").trim();
-            }
-            const hasGuarnExtra = cleanExtras.some((g: any) => g.titulo.toLowerCase() === "guarniciones");
-            if (hasGuarnExtra && /^guarniciones?:\s*/i.test(descripcion)) {
-                descripcion = descripcion.replace(/^guarniciones?:\s*.+$/i, "").trim();
-            }
+            // Limpieza más robusta de la descripción: eliminamos líneas que empiecen con Salsas: o Guarniciones:
+            const descripcion = form.descripcion
+                .split('\n')
+                .filter(line => !line.trim().match(/^(salsas?|guarniciones?):\s*/i))
+                .join('\n')
+                .trim();
 
-            const data: any = {
+            const existingDetalles = (producto as any)?.detalles_especificos || {};
+
+            const updateFields: any = {
                 nombre_producto: form.nombre_producto.trim(),
                 categoria_producto: form.categoria_producto,
                 categorias: [form.categoria_producto, form.tipo],
                 detalles_especificos: {
+                    ...existingDetalles,
                     tipo: form.tipo,
-                    ...(cleanExtras.length > 0 && { extras: cleanExtras }),
+                    unidad_medida: form.unidad_medida,
+                    extras: cleanExtras
                 },
                 precio_base: form.opciones.length > 0 ? 0 : Number(form.precio_base),
                 descripcion,
                 imagen: form.imagen.trim(),
                 estado: form.estado,
+                es_servicio: form.es_servicio,
                 opciones: form.opciones.length > 0 ? form.opciones.filter((o: any) => o.nombre.trim()) : [],
-                opciones_extras: [],
             };
+
+            if (cleanExtras.length > 0) {
+                const allExtras: { nombre: string; precio: number }[] = [];
+                cleanExtras.forEach((g: any) => {
+                    g.opciones.forEach((o: any) => {
+                        allExtras.push({ nombre: o.nombre, precio: o.precio });
+                    });
+                });
+                updateFields.opciones_extras = allExtras;
+            } else {
+                updateFields.opciones_extras = [];
+            }
+
             if (isEdit && producto?.id_producto) {
-                await updateProducto(producto.id_producto, data);
+                await updateProducto(producto.id_producto, updateFields);
                 toast.success("Producto actualizado");
             } else {
-                await createProducto(ELYS_NEGOCIO_ID, data);
+                await createProducto(ELYS_NEGOCIO_ID, updateFields);
                 toast.success("Producto creado");
             }
             onClose();
@@ -263,6 +315,53 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                             >
                                 {tiposDisponibles.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 mb-6">
+                        <label
+                            onClick={() => setForm((f: any) => ({ ...f, es_servicio: !f.es_servicio }))}
+                            className={`group flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer ${form.es_servicio
+                                ? 'bg-orange-50 border-orange-200 dark:bg-orange-500/10 dark:border-orange-500/30'
+                                : 'bg-gray-50 dark:bg-zinc-800/30 border-gray-100 dark:border-zinc-800'
+                                }`}
+                        >
+                            <div className="relative flex items-center justify-center">
+                                <input
+                                    type="checkbox"
+                                    checked={form.es_servicio || false}
+                                    readOnly
+                                    className="peer h-6 w-6 appearance-none rounded-lg border-2 border-gray-200 dark:border-zinc-700 checked:bg-orange-500 checked:border-orange-500 transition-all cursor-pointer"
+                                />
+                                <svg className="absolute w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <div className="flex flex-col flex-1">
+                                <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Es un Servicio</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase leading-none mt-0.5">
+                                    {form.es_servicio ? 'Habilitado como servicio (digital/online)' : 'Producto físico estándar'}
+                                </span>
+                            </div>
+                        </label>
+
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Unidad de Medida / Venta</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {['Unidad', 'Kg', 'Gramos', 'Litro', 'Porción', 'Docena', 'Turno', 'Hora', 'Sesión', 'Día', 'Semana', 'Mes'].map((unit) => (
+                                    <button
+                                        key={unit}
+                                        type="button"
+                                        onClick={() => setForm((f: any) => ({ ...f, unidad_medida: unit }))}
+                                        className={`px-3 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-tight transition-all ${form.unidad_medida === unit
+                                            ? 'bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-500/20 scale-[1.02]'
+                                            : 'bg-white dark:bg-zinc-800/50 border-gray-100 dark:border-zinc-800 text-gray-500 dark:text-zinc-400 hover:border-orange-200'
+                                            }`}
+                                    >
+                                        {unit}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -373,12 +472,12 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
 
                     {/* Extras / Adicionales */}
                     <div className="pt-4 border-t border-gray-100 dark:border-zinc-800">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 mb-3">
                             <label className="text-[11px] font-black text-orange-600 uppercase tracking-widest flex items-center gap-1.5">
                                 <PlusCircle size={13} /> Adicionales / Extras
                             </label>
                             <button type="button" onClick={addExtraGrupo}
-                                className="text-[10px] font-black bg-orange-600 text-white px-2.5 py-1.5 rounded-lg hover:bg-orange-700 transition-all flex items-center gap-1.5">
+                                className="text-[10px] sm:text-[9px] font-black bg-orange-600 text-white px-2.5 py-1.5 rounded-lg hover:bg-orange-700 transition-all flex items-center gap-1.5">
                                 <PlusCircle size={11} /> Grupo
                             </button>
                         </div>
@@ -390,17 +489,17 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                         ) : (
                             <div className="space-y-3">
                                 {form.extras.map((grupo: ElysExtraGrupo, eIdx: number) => (
-                                    <div key={eIdx} className="bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl p-3 space-y-2.5">
-                                        <div className="flex items-center gap-2">
+                                    <div key={eIdx} className="bg-gray-50 dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-2xl p-3 sm:p-4 space-y-3">
+                                        <div className="flex items-center gap-2 sm:gap-3">
                                             <input
                                                 type="text"
                                                 value={grupo.titulo}
                                                 onChange={e => updateExtraGrupo(eIdx, "titulo", e.target.value)}
-                                                placeholder="Ej: Elegí tu salsa"
-                                                className="flex-1 bg-transparent border-none focus:ring-0 font-black text-xs placeholder-gray-400 text-gray-900 dark:text-white"
+                                                placeholder="Nombre del grupo (ej: Salsas, Guarniciones)"
+                                                className="flex-1 min-w-0 bg-transparent border-none focus:ring-0 font-black text-xs sm:text-sm placeholder-gray-400 text-gray-900 dark:text-white"
                                             />
                                             <button type="button" onClick={() => removeExtraGrupo(eIdx)}
-                                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
+                                                className="p-1.5 sm:p-2 text-gray-400 hover:text-red-500 transition-colors shrink-0">
                                                 <Trash2 size={13} />
                                             </button>
                                         </div>
@@ -408,11 +507,11 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                                         <div className="flex flex-wrap items-center gap-2 px-0.5">
                                             <div className="flex bg-gray-100 dark:bg-zinc-800 rounded-lg p-0.5">
                                                 <button type="button" onClick={() => updateExtraGrupo(eIdx, "tipo", "unica")}
-                                                    className={`px-2 py-1 rounded-md text-[8px] font-black transition-all ${grupo.tipo === "unica" ? "bg-white dark:bg-zinc-700 shadow-sm text-orange-600" : "text-gray-400"}`}>
+                                                    className={`px-2 sm:px-3 py-1 rounded-md text-[8px] sm:text-[9px] font-black transition-all ${grupo.tipo === "unica" ? "bg-white dark:bg-zinc-700 shadow-sm text-orange-600" : "text-gray-400"}`}>
                                                     ÚNICA
                                                 </button>
                                                 <button type="button" onClick={() => updateExtraGrupo(eIdx, "tipo", "multiple")}
-                                                    className={`px-2 py-1 rounded-md text-[8px] font-black transition-all ${grupo.tipo === "multiple" ? "bg-white dark:bg-zinc-700 shadow-sm text-orange-600" : "text-gray-400"}`}>
+                                                    className={`px-2 sm:px-3 py-1 rounded-md text-[8px] sm:text-[9px] font-black transition-all ${grupo.tipo === "multiple" ? "bg-white dark:bg-zinc-700 shadow-sm text-orange-600" : "text-gray-400"}`}>
                                                     MÚLTIPLE
                                                 </button>
                                             </div>
@@ -420,23 +519,23 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                                                 <input type="checkbox" checked={grupo.obligatorio}
                                                     onChange={e => updateExtraGrupo(eIdx, "obligatorio", e.target.checked)}
                                                     className="w-3 h-3 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
-                                                <span className="text-[9px] font-black text-gray-400 uppercase">Obligatorio</span>
+                                                <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase">Obligatorio</span>
                                             </label>
                                         </div>
 
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-2">
                                             {grupo.opciones.map((op, oIdx) => (
-                                                <div key={oIdx} className="flex gap-1.5 items-center">
+                                                <div key={oIdx} className="flex gap-1.5 sm:gap-2 items-center">
                                                     <input type="text" value={op.nombre}
                                                         onChange={e => updateExtraOpcion(eIdx, oIdx, "nombre", e.target.value)}
                                                         placeholder="Nombre"
-                                                        className="flex-1 px-2.5 py-2 bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-lg text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-orange-500" />
+                                                        className="flex-1 min-w-0 px-2.5 py-2 bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-lg text-[11px] sm:text-sm font-bold focus:outline-none focus:ring-1 focus:ring-orange-500" />
                                                     <div className="flex items-center gap-0.5 bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-lg px-2 py-2 shrink-0">
-                                                        <span className="text-[9px] font-black text-gray-400">$</span>
+                                                        <span className="text-[9px] sm:text-[10px] font-black text-gray-400">$</span>
                                                         <input type="number" value={op.precio}
                                                             onChange={e => updateExtraOpcion(eIdx, oIdx, "precio", e.target.value)}
                                                             placeholder="0"
-                                                            className="w-14 bg-transparent border-none focus:ring-0 text-[11px] font-black p-0" />
+                                                            className="w-14 sm:w-16 bg-transparent border-none focus:ring-0 text-[11px] sm:text-sm font-bold p-0" />
                                                     </div>
                                                     <button type="button" onClick={() => removeExtraOpcion(eIdx, oIdx)}
                                                         className="p-1 text-gray-300 hover:text-red-500 transition-colors shrink-0">
@@ -445,7 +544,7 @@ function ElysProductoModal({ isOpen, onClose, producto }: {
                                                 </div>
                                             ))}
                                             <button type="button" onClick={() => addExtraOpcion(eIdx)}
-                                                className="w-full py-1.5 border border-dashed border-gray-200 dark:border-zinc-700 rounded-lg text-[9px] font-black text-gray-400 hover:border-orange-300 hover:text-orange-600 transition-all flex items-center justify-center gap-1">
+                                                className="w-full py-2 sm:py-1.5 border border-dashed border-gray-200 dark:border-zinc-700 rounded-lg text-[9px] sm:text-[10px] font-black text-gray-400 hover:border-orange-300 hover:text-orange-600 transition-all flex items-center justify-center gap-1">
                                                 <Plus size={10} /> Opción
                                             </button>
                                         </div>
@@ -754,38 +853,44 @@ export function ElysProductsPanel({ productos, loadingProductos, negocioData }: 
                                                         <p className="text-[12px] font-black text-orange-600">${Number(p.precio_base).toLocaleString('es-AR')}</p>
                                                     ) : null}
                                                     {(() => {
+                                                        // PRIORIDAD: Si hay extras estructurados, NO renderizamos los parseados de la descripción
+                                                        if (p.detalles_especificos?.extras?.length > 0) return null;
+
                                                         const desc: string = p.descripcion || "";
-                                                        const salsaMatch = desc.match(/^Salsas?:\s*(.+)$/i);
-                                                        if (salsaMatch) {
-                                                            return salsaMatch[1].split(",").map((s: string) => s.trim()).filter(Boolean).map((salsa: string, i: number) => (
-                                                                <span key={`salsa-${i}`} className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
-                                                                    {salsa}
-                                                                </span>
-                                                            ));
-                                                        }
-                                                        const guarnMatch = desc.match(/^Guarniciones?:\s*(.+)$/i);
-                                                        if (guarnMatch) {
-                                                            return guarnMatch[1].split(",").map((s: string) => s.trim()).filter(Boolean).map((g: string, i: number) => (
-                                                                <span key={`guarn-${i}`} className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
-                                                                    {g}
-                                                                </span>
-                                                            ));
+                                                        const lines = desc.split('\n').map(l => l.trim()).filter(Boolean);
+                                                        
+                                                        for (const line of lines) {
+                                                            const salsaMatch = line.match(/^Salsas?:\s*(.+)$/i);
+                                                            if (salsaMatch) {
+                                                                return salsaMatch[1].split(",").map((s: string) => s.trim()).filter(Boolean).map((salsa: string, i: number) => (
+                                                                    <span key={`salsa-${i}`} className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                                                                        {salsa}
+                                                                    </span>
+                                                                ));
+                                                            }
+                                                            const guarnMatch = line.match(/^Guarniciones?:\s*(.+)$/i);
+                                                            if (guarnMatch) {
+                                                                return guarnMatch[1].split(",").map((s: string) => s.trim()).filter(Boolean).map((g: string, i: number) => (
+                                                                    <span key={`guarn-${i}`} className="text-[11px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                                                                        {g}
+                                                                    </span>
+                                                                ));
+                                                            }
                                                         }
                                                         return null;
                                                     })()}
-                                                    {(p.detalles_especificos?.extras?.length > 0 || p.opciones_extras?.length > 0) && (
-                                                        <>
-                                                            {p.detalles_especificos?.extras?.flatMap((g: any) => g.opciones || []).map((o: any, i: number) => (
-                                                                <span key={`de-${i}`} className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
-                                                                    + {o.nombre}: ${Number(o.precio).toLocaleString('es-AR')}
-                                                                </span>
-                                                            ))}
-                                                            {p.opciones_extras?.map((o: any, i: number) => (
-                                                                <span key={`oe-${i}`} className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
-                                                                    + {o.nombre}: ${Number(o.precio).toLocaleString('es-AR')}
-                                                                </span>
-                                                            ))}
-                                                        </>
+                                                    {p.detalles_especificos?.extras?.length > 0 && (
+                                                        p.detalles_especificos.extras.flatMap((g: any) => g.opciones || []).map((o: any, i: number) => (
+                                                            <span key={`de-${i}`} className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full">
+                                                                + {o.nombre}{Number(o.precio) > 0 ? `: $${Number(o.precio).toLocaleString('es-AR')}` : ''}
+                                                            </span>
+                                                        ))
+                                                    )}
+                                                    {p.detalles_especificos?.es_servicio && (
+                                                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                                            Servicio
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

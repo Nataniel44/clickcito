@@ -89,11 +89,10 @@ export async function getProductoById(idProducto: string) {
 
 export async function updateProducto(idProducto: string, data: any) {
     const docRef = doc(db, PRODUCTOS_COL, idProducto);
-    // Al actualizar no se debería permitir cambiar el id_negocio sin reglas severas
-    await updateDoc(docRef, {
+    await setDoc(docRef, {
         ...data,
         updatedAt: serverTimestamp(),
-    });
+    }, { merge: true });
 }
 
 export async function deleteProducto(idProducto: string) {

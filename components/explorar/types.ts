@@ -16,6 +16,7 @@ export interface Negocio {
     horarios?: Record<string, string>;
     createdAt?: any;
     activo?: boolean;
+    abierto_siempre?: boolean;
     rating?: {
         total_resenas: number;
         promedio: number;

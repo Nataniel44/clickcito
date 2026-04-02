@@ -2,8 +2,9 @@
  * Verifica si un negocio está abierto actualmente basado en sus horarios
  * Formato esperado en horarios[dia]: "HH:MM - HH:MM" o "HH:MM a HH:MM" 
  */
-export function isBusinessOpen(horarios: any): boolean {
-    if (!horarios) return true; // Si no hay horarios definidos, lo consideramos abierto por defecto o manejalo como prefieras
+export function isBusinessOpen(horarios: any, abiertoSiempre?: boolean): boolean {
+    if (abiertoSiempre) return true;
+    if (!horarios) return true; // Si no hay horarios definidos, lo consideramos abierto por defecto
 
     const now = new Date();
     // Ajuste para zona horaria local if needed, pero Date() suele ser local del navegador

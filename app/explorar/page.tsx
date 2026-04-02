@@ -186,7 +186,7 @@ export default function ExplorarPage() {
             const locSearch = n.ubicacion?.toLowerCase().includes(searchTerm.toLowerCase());
             const match = nameSearch || descSearch || locSearch;
             const rubroMatch = activeRubro === "todos" || n.rubro === activeRubro;
-            const openMatch = !onlyOpen || isBusinessOpen(n.horarios);
+            const openMatch = !onlyOpen || isBusinessOpen(n.horarios, n.abierto_siempre);
             return match && rubroMatch && openMatch;
         }).map(n => {
             let distance: number | undefined;
