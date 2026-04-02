@@ -23,19 +23,19 @@ export async function createPreferenceAction(items: any[], businessAccessToken: 
 
         const body = {
             items: items.map(item => ({
-                id: item.id || item.cartItemId,
-                title: String(item.nombre_producto).substring(0, 250),
-                quantity: Math.max(1, Number(item.cantidad)),
-                unit_price: Number(item.precio_unitario),
+                id: String(item.id || item.cartItemId).substring(0, 50),
+                title: String(item.nombre_producto).replace(/[^\w\s]/gi, '').substring(0, 250),
+                quantity: Math.max(1, Math.floor(Number(item.cantidad))),
+                unit_price: Math.max(1, Number(item.precio_unitario)),
                 currency_id: "ARS"
             })),
             back_urls: {
-                success: `${baseUrl}/mis-pedidos?payment=success`,
-                failure: `${baseUrl}/checkout?payment=failure`,
-                pending: `${baseUrl}/mis-pedidos?payment=pending`
+                success: `${baseUrl}/mis-pedidos?status=success`,
+                failure: `${baseUrl}/checkout?status=failure`,
+                pending: `${baseUrl}/mis-pedidos?status=pending`
             },
-            auto_return: "approved",
-            statement_descriptor: businessName.substring(0, 16),
+            // Clean statement descriptor (only alphanumeric and spaces)
+            statement_descriptor: businessName.replace(/[^\w\s]/gi, '').substring(0, 16).trim(),
             external_reference: `ORDER-${Date.now()}`
         };
 
