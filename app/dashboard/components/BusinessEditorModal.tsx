@@ -7,6 +7,7 @@ import { updateNegocio } from "@/app/firebase/db";
 import { uploadLogoAction, uploadProductImageAction } from "@/app/actions/uploadAction";
 import toast from "react-hot-toast";
 import { compressImage } from "@/lib/compressImage";
+import { getMPUserIdAction } from "@/app/actions/mercadopago";
 
 const DAYS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
 
@@ -85,7 +86,10 @@ export function BusinessEditorModal({
                 fotos: formData.fotos || [],
                 horarios: formData.horarios,
                 configuracion_logistica: formData.configuracion_logistica,
-                mercado_pago: formData.mercado_pago
+                mercado_pago: {
+                    ...formData.mercado_pago,
+                    user_id: formData.mercado_pago?.access_token ? await getMPUserIdAction(formData.mercado_pago.access_token) : null
+                }
             };
 
             await updateNegocio(negocio.id, safePayload);

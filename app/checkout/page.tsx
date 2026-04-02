@@ -419,7 +419,13 @@ export default function CheckoutPage() {
                             { id: 'efectivo', label: 'Efectivo', sub: 'Pagás al recibir su pedido', icon: Banknote, color: 'text-green-500' },
                             { id: 'transferencia', label: 'Transferencia', sub: 'Alias / CVU del negocio', icon: Wallet, color: 'text-blue-500' },
                             ...(negocioInfo?.mercado_pago?.habilitado ? [
-                                { id: 'mercadopago', label: 'Mercado Pago', sub: 'Link de pago sin comisión', icon: QrCode, color: 'text-sky-500' }
+                                { 
+                                    id: 'mercadopago', 
+                                    label: (negocioInfo?.mercado_pago?.access_token?.startsWith('TEST-') ? 'Mercado Pago (MODO PRUEBA)' : 'Mercado Pago'), 
+                                    sub: 'Link de pago sin comisión', 
+                                    icon: QrCode, 
+                                    color: 'text-sky-500' 
+                                }
                             ] : [])
                         ].map((pago) => (
                             <button
