@@ -24,9 +24,11 @@ export async function createPreferenceAction(items: any[], businessAccessToken: 
         const body = {
             items: items.map(item => ({
                 id: String(item.id || item.cartItemId).substring(0, 50),
-                title: String(item.nombre_producto).replace(/[^\w\s]/gi, '').substring(0, 250),
+                title: String(item.nombre_producto || "Producto")
+                    .replace(/[^a-zA-Z0-9\sñáéíóúÁÉÍÓÚ]/g, '')
+                    .substring(0, 250) || "Producto Mercado Pago",
                 quantity: Math.max(1, Math.floor(Number(item.cantidad))),
-                unit_price: Math.max(1, Number(item.precio_unitario)),
+                unit_price: Math.max(1, Math.floor(Number(item.precio_unitario))),
                 currency_id: "ARS"
             })),
             back_urls: {
@@ -34,8 +36,10 @@ export async function createPreferenceAction(items: any[], businessAccessToken: 
                 failure: `${baseUrl}/checkout?status=failure`,
                 pending: `${baseUrl}/mis-pedidos?status=pending`
             },
-            // Clean statement descriptor (only alphanumeric and spaces)
-            statement_descriptor: businessName.replace(/[^\w\s]/gi, '').substring(0, 16).trim(),
+            // Clean statement descriptor (only alphanumeric and spaces, at least 1 char)
+            statement_descriptor: (businessName || "Clickcito")
+                .replace(/[^a-zA-Z0-9\s]/g, '')
+                .substring(0, 16).trim() || "Clickcito",
             external_reference: `ORDER-${Date.now()}`
         };
 
