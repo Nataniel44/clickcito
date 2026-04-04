@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export function CartSidebar() {
     const { cart, removeFromCart, cartTotal, clearCart } = useCart();
     const [isOpen, setIsOpen] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const router = useRouter();
 
     if (cart.length === 0 && !isOpen) return null;
@@ -172,7 +173,7 @@ export function CartSidebar() {
 
                             {/* Clear */}
                             <button
-                                onClick={clearCart}
+                                onClick={() => setShowClearConfirm(true)}
                                 className="mt-3 w-full text-center text-sm text-gray-400 hover:text-red-500 font-bold transition-colors py-2"
                             >
                                 Vaciar carrito
@@ -181,6 +182,42 @@ export function CartSidebar() {
                     )}
                 </div>
             </div>
+
+            {/* ═══════ MODAL CONFIRMAR VACIAR CARRITO ═══════ */}
+            {showClearConfirm && (
+                <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowClearConfirm(false)} />
+                    <div className="relative bg-white dark:bg-zinc-900 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in slide-in-from-bottom-4 fade-in zoom-in duration-200">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                                <Trash2 size={22} className="text-red-500" />
+                            </div>
+                            <button onClick={() => setShowClearConfirm(false)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white mb-1">Vaciar carrito</h3>
+                        <p className="text-sm text-gray-400 font-medium mb-6">Se eliminarán todos los productos. Esta acción no se puede deshacer.</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowClearConfirm(false)}
+                                className="flex-1 py-3.5 px-4 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 font-black rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    clearCart();
+                                    setShowClearConfirm(false);
+                                }}
+                                className="flex-1 py-3.5 px-4 bg-red-500 text-white font-black rounded-xl text-sm hover:bg-red-600 active:scale-95 transition-all shadow-lg shadow-red-500/20"
+                            >
+                                Sí, vaciar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

@@ -3,6 +3,7 @@
 import { Plus, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { resolveImageUrl } from "@/app/utils/imageUtils";
+import { useState, useRef, useCallback } from "react";
 
 interface PhotoLightboxProps {
     activePhotoIndex: number | null;
@@ -19,6 +20,48 @@ export function PhotoLightbox({
     onNext,
     onPrev
 }: PhotoLightboxProps) {
+    const [touchStart, setTouchStart] = useState(0);
+    const [touchEnd, setTouchEnd] = useState(0);
+    const [touchDelta, setTouchDelta] = useState(0);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const minSwipeDistance = 30;
+
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        setTouchEnd(0);
+        setTouchStart(e.targetTouches[0].clientX);
+        setTouchDelta(0);
+    }, []);
+
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        const currentTouch = e.targetTouches[0].clientX;
+        const delta = currentTouch - touchStart;
+        setTouchEnd(currentTouch);
+        setTouchDelta(delta);
+    }, [touchStart]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (!touchEnd) {
+            setTouchDelta(0);
+            return;
+        }
+
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            onNext();
+        } else if (isRightSwipe) {
+            onPrev();
+        }
+
+        setTouchDelta(0);
+        setTouchStart(0);
+        setTouchEnd(0);
+    }, [touchStart, touchEnd, onNext, onPrev]);
+
     if (activePhotoIndex === null) return null;
 
     const currentPhoto = fotos[activePhotoIndex];
@@ -57,8 +100,16 @@ export function PhotoLightbox({
 
             {/* Image Container */}
             <div
-                className="relative w-full h-[70vh] flex items-center justify-center p-4 transition-all duration-300"
+                ref={containerRef}
+                className="relative w-full h-[70vh] flex items-center justify-center p-4 transition-all duration-300 touch-pan-x"
                 onClick={(e) => e.stopPropagation()}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                style={{
+                    transform: touchDelta !== 0 ? `translateX(${touchDelta * 0.3}px)` : undefined,
+                    transition: touchDelta !== 0 ? 'none' : 'transform 0.3s ease-out'
+                }}
             >
                 {(currentPhoto.startsWith('http') || currentPhoto.startsWith('/')) ? (
                     <div className="relative w-full h-full max-w-4xl animate-in zoom-in-95 duration-300">

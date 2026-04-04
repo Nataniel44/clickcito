@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Save, Store, Clock, Truck, Info, CheckCircle2, Upload, ImageIcon, Loader2, Globe, MapPin, Star, Settings2, CreditCard } from "lucide-react";
+import { X, Save, Store, Clock, Truck, Info, CheckCircle2, Upload, ImageIcon, Loader2, Globe, MapPin, Star, Settings2, CreditCard, Wallet, Copy } from "lucide-react";
 import Image from "next/image";
 import { updateNegocio } from "@/app/firebase/db";
 import { uploadLogoAction, uploadProductImageAction } from "@/app/actions/uploadAction";
@@ -61,6 +61,7 @@ export function BusinessEditorModal({
                     public_key: negocio.mercado_pago?.public_key || "",
                     access_token: negocio.mercado_pago?.access_token || ""
                 },
+                alias_transferencia: negocio.alias_transferencia || "",
                 fotos: negocio.fotos || []
             });
         }
@@ -89,7 +90,8 @@ export function BusinessEditorModal({
                 mercado_pago: {
                     ...formData.mercado_pago,
                     user_id: formData.mercado_pago?.access_token ? await getMPUserIdAction(formData.mercado_pago.access_token) : null
-                }
+                },
+                alias_transferencia: formData.alias_transferencia || ""
             };
 
             await updateNegocio(negocio.id, safePayload);
@@ -414,7 +416,43 @@ export function BusinessEditorModal({
 
                             {activeTab === "pagos" && (
                                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                    {/* Transferencia / Alias */}
                                     <div className="flex flex-col gap-1">
+                                        <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                                            <Wallet className="text-emerald-500" size={18} /> Transferencia Bancaria
+                                        </h3>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Alias o CVU para que los clientes te transfieran</p>
+                                    </div>
+
+                                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-3xl p-6 space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-gray-400 uppercase mb-1.5 px-1">Alias / CVU</label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="text" 
+                                                    value={formData.alias_transferencia} 
+                                                    onChange={e => setFormData({ ...formData, alias_transferencia: e.target.value })}
+                                                    placeholder="ejemplo.negocio"
+                                                    className="w-full px-4 py-3 pr-12 bg-white dark:bg-zinc-950 border border-gray-100 dark:border-zinc-800 rounded-2xl text-sm font-mono"
+                                                />
+                                                {formData.alias_transferencia && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(formData.alias_transferencia);
+                                                            toast.success("Alias copiado!");
+                                                        }}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 text-gray-400 hover:text-emerald-500 transition-colors"
+                                                    >
+                                                        <Copy size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Mercado Pago */}
+                                    <div className="pt-4 border-t border-gray-100 dark:border-zinc-800 flex flex-col gap-1">
                                         <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
                                             <CreditCard className="text-blue-500" size={18} /> Mercado Pago
                                         </h3>
