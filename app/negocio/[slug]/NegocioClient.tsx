@@ -50,7 +50,6 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const [purchasedProducts, setPurchasedProducts] = useState<Record<string, any>>({});
     const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
     const [isScrolled, setIsScrolled] = useState(false);
-    const [isNavbarVisible, setIsNavbarVisible] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
     // ScrollSpy States
@@ -58,7 +57,6 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const categoryNavRef = useRef<HTMLDivElement>(null);
 
-    const lastScrollY = useRef(0);
     const { addToCart, cart, clearCart } = useCart();
 
     const fotos = negocio?.fotos || [];
@@ -128,16 +126,7 @@ export default function NegocioClient({ slug }: { slug: string }) {
 
     useEffect(() => {
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            setIsScrolled(currentScrollY > 140);
-
-            // Lógica para detectar si el Navbar principal está visible
-            if (currentScrollY < lastScrollY.current || currentScrollY < 100) {
-                setIsNavbarVisible(true);
-            } else {
-                setIsNavbarVisible(false);
-            }
-            lastScrollY.current = currentScrollY;
+            setIsScrolled(window.scrollY > 140);
         };
 
         window.addEventListener("scroll", handleScroll, { passive: true });
@@ -378,7 +367,6 @@ export default function NegocioClient({ slug }: { slug: string }) {
                 gradient={gradient}
                 emoji={emoji}
                 isScrolled={isScrolled}
-                isNavbarVisible={isNavbarVisible}
                 onBack={() => router.back()}
                 onShare={handleShare}
                 onWhatsapp={handleWhatsapp}
@@ -402,7 +390,6 @@ export default function NegocioClient({ slug }: { slug: string }) {
                         productosPorTipo={productosPorTipo}
                         categoriasOrdenadas={categoriasOrdenadas}
                         activeCategory={activeCategory}
-                        isNavbarVisible={isNavbarVisible}
                         accent={accent}
                         emoji={emoji}
                         isOpen={isOpen}

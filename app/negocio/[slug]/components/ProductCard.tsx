@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Plus, Star, Clock, Check, CheckCircle2, ArrowRight } from "lucide-react";
@@ -58,7 +58,7 @@ interface ProductCardProps {
     purchased?: any;
 }
 
-export function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallbackEmoji, isClosed, purchased }: ProductCardProps) {
+export const ProductCard = memo(function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallbackEmoji, isClosed, purchased }: ProductCardProps) {
     const hasAccess = !!purchased;
     const unitInfo = useMemo(() => resolveUnit(prod.detalles_especificos), [prod.detalles_especificos]);
     const [qty, setQty] = useState(unitInfo.step);
@@ -97,12 +97,11 @@ export function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallba
                         {loadingImage && (
                             <div className="absolute inset-0 bg-gray-200 dark:bg-zinc-800 animate-pulse z-10" />
                         )}
-                        <Image
+                        <img
                             src={resolveImageUrl(prod.imagen_url)}
                             alt={prod.nombre_producto || "Producto"}
-                            fill
-                            className={`object-cover group-hover:scale-110 transition-all duration-700 ${!isAvailable ? 'grayscale opacity-50' : ''} ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'}`}
-                            unoptimized
+                            className={`absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-all duration-700 ${!isAvailable ? 'grayscale opacity-50' : ''} ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'}`}
+                            loading="lazy"
                             onLoad={() => setLoadingImage(false)}
                             onError={() => {
                                 setImageError(true);
@@ -186,4 +185,4 @@ export function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallba
             </div>
         </div>
     );
-}
+});

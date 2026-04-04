@@ -3,15 +3,15 @@
 import { MapPin, Truck, Globe, Package, Armchair, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import { resolveImageUrl } from "@/app/utils/imageUtils";
-import { useState } from "react";
+import { useState, memo } from "react";
 
-function GalleryItem({ src, index, onClick }: { src: string; index: number; onClick: () => void }) {
+const GalleryItem = memo(function GalleryItem({ src, index, onPhotoClick }: { src: string; index: number; onPhotoClick: (index: number) => void }) {
     const [loading, setLoading] = useState(true);
     const isImage = src.startsWith('http') || src.startsWith('/');
 
     return (
         <div
-            onClick={onClick}
+            onClick={() => isImage && onPhotoClick(index)}
             className="w-[94px] h-[94px] sm:w-[110px] sm:h-[110px] rounded-xl bg-gray-50 dark:bg-zinc-800 overflow-hidden shrink-0 relative cursor-pointer transition-all border border-gray-100 dark:border-zinc-700 active:opacity-70"
         >
             {isImage ? (
@@ -34,7 +34,7 @@ function GalleryItem({ src, index, onClick }: { src: string; index: number; onCl
             )}
         </div>
     );
-}
+});
 
 interface BusinessMainInfoProps {
     negocio: any;
@@ -45,7 +45,7 @@ interface BusinessMainInfoProps {
     onPhotoClick: (index: number) => void;
 }
 
-export function BusinessMainInfo({
+export const BusinessMainInfo = memo(function BusinessMainInfo({
     negocio,
     isOpen,
     emoji,
@@ -122,7 +122,7 @@ export function BusinessMainInfo({
                                 key={i}
                                 src={src}
                                 index={i}
-                                onClick={() => (src.startsWith('http') || src.startsWith('/')) && onPhotoClick(i)}
+                                onPhotoClick={onPhotoClick}
                             />
                         ))}
                     </div>
@@ -130,4 +130,4 @@ export function BusinessMainInfo({
             )}
         </div>
     );
-}
+});

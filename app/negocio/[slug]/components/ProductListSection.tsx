@@ -1,7 +1,7 @@
 "use client";
 
 import { ShoppingBag, MessageCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState, useRef, memo } from "react";
 import { ProductCard } from "./ProductCard";
 
 interface ProductListSectionProps {
@@ -9,7 +9,6 @@ interface ProductListSectionProps {
     productosPorTipo: Record<string, any[]>;
     categoriasOrdenadas: string[];
     activeCategory: string;
-    isNavbarVisible: boolean;
     accent: string;
     emoji: string;
     isOpen: boolean;
@@ -23,12 +22,11 @@ interface ProductListSectionProps {
     categoryRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
 }
 
-export function ProductListSection({
+export const ProductListSection = memo(function ProductListSection({
     productos,
     productosPorTipo,
     categoriasOrdenadas,
     activeCategory,
-    isNavbarVisible,
     accent,
     emoji,
     isOpen,
@@ -41,6 +39,23 @@ export function ProductListSection({
     categoryNavRef,
     categoryRefs
 }: ProductListSectionProps) {
+    const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+    const lastScrollY = useRef(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY < lastScrollY.current || currentScrollY < 100) {
+                setIsNavbarVisible(true);
+            } else {
+                setIsNavbarVisible(false);
+            }
+            lastScrollY.current = currentScrollY;
+        };
+
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
     // Auto-scroll the category nav to center the active category
     useEffect(() => {
         if (!activeCategory || !categoryNavRef.current) return;
@@ -141,4 +156,4 @@ export function ProductListSection({
             )}
         </div>
     );
-}
+});
