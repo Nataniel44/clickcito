@@ -1,8 +1,10 @@
 "use client";
 
-import { ShoppingBag, MessageCircle } from "lucide-react";
+import { ShoppingBag, MessageCircle, ChevronDown } from "lucide-react";
 import { useEffect, useState, useRef, memo } from "react";
 import { ProductCard } from "./ProductCard";
+
+const INITIAL_LIMIT = 30;
 
 interface ProductListSectionProps {
     productos: any[];
@@ -40,6 +42,7 @@ export const ProductListSection = memo(function ProductListSection({
     categoryRefs
 }: ProductListSectionProps) {
     const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+    const [showAll, setShowAll] = useState(false);
     const lastScrollY = useRef(0);
 
     useEffect(() => {
@@ -56,6 +59,31 @@ export const ProductListSection = memo(function ProductListSection({
         window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
+
+    useEffect(() => {
+        if (showAll) return;
+        const totalVisible = productos.slice(0, INITIAL_LIMIT).length;
+        if (productos.length <= INITIAL_LIMIT) setShowAll(true);
+    }, [productos, showAll]);
+
+    const visibleProductos = showAll ? productos : productos.slice(0, INITIAL_LIMIT);
+    const remainingCount = productos.length - INITIAL_LIMIT;
+
+    const visibleProductosPorTipo: Record<string, any[]> = {};
+    visibleProductos.forEach(p => {
+        let tipo = p.categoria_producto || p.categorias?.[0] || p.detalles_especificos?.tipo || "General";
+        if (p.id_negocio === "elysrestobar" && p.categoria_producto && p.detalles_especificos?.tipo) {
+            tipo = `${p.categoria_producto} - ${p.detalles_especificos.tipo}`;
+        }
+        if (!visibleProductosPorTipo[tipo]) visibleProductosPorTipo[tipo] = [];
+        visibleProductosPorTipo[tipo].push(p);
+    });
+
+    const visibleCategorias = showAll ? categoriasOrdenadas : categoriasOrdenadas.filter(tipo => visibleProductosPorTipo[tipo]);
+
+    const handleShowMore = () => {
+        setShowAll(true);
+    };
     // Auto-scroll the category nav to center the active category
     useEffect(() => {
         if (!activeCategory || !categoryNavRef.current) return;
@@ -92,7 +120,7 @@ export const ProductListSection = memo(function ProductListSection({
                     {Object.keys(productosPorTipo).length > 1 && (
                         <div className={`sticky z-30 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-md pt-3 pb-3 -mx-4 px-4 sm:mx-0 sm:px-0 border-b border-gray-100 dark:border-zinc-800/50 mb-2 rounded-b-xl transition-all duration-300 ease-in-out ${isNavbarVisible ? "top-[139px]" : "top-[64px]"}`}>
                             <div ref={categoryNavRef} className="flex gap-2 overflow-x-auto custom-scrollbar scroll-smooth snap-x">
-                                {categoriasOrdenadas.map((tipo) => (
+                                {visibleCategorias.map((tipo) => (
                                     <button
                                         key={tipo}
                                         data-category={tipo}
@@ -109,8 +137,8 @@ export const ProductListSection = memo(function ProductListSection({
                         </div>
                     )}
 
-                    {categoriasOrdenadas.map((tipo) => {
-                        const prods = productosPorTipo[tipo];
+                    {visibleCategorias.map((tipo) => {
+                        const prods = visibleProductosPorTipo[tipo];
                         return (
                             <div
                                 key={tipo}
@@ -142,6 +170,19 @@ export const ProductListSection = memo(function ProductListSection({
                             </div>
                         );
                     })}
+
+                    {!showAll && productos.length > INITIAL_LIMIT && (
+                        <div className="flex flex-col items-center gap-2 py-6">
+                            <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-zinc-700 to-transparent" />
+                            <button
+                                onClick={handleShowMore}
+                                className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-2xl text-sm font-bold text-gray-600 dark:text-zinc-300 hover:border-orange-300 dark:hover:border-orange-600 hover:text-orange-600 dark:hover:text-orange-500 transition-all shadow-sm active:scale-95"
+                            >
+                                Ver {remainingCount} productos más
+                                <ChevronDown size={16} className="animate-bounce" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800/70 rounded-2xl py-16 text-center shadow-sm">

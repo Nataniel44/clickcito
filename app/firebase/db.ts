@@ -70,6 +70,11 @@ export async function getProductosByNegocio(idNegocio: string) {
     return snapshot.docs.map((doc) => ({ id_producto: doc.id, ...doc.data() }));
 }
 
+export async function getAllProductos() {
+    const snapshot = await getDocs(collection(db, PRODUCTOS_COL));
+    return snapshot.docs.map((doc) => ({ id_producto: doc.id, ...doc.data() }));
+}
+
 // data contiene campos obligatorios + detalles_especificos (objeto dinámico según rubro)
 export async function createProducto(idNegocio: string, data: any) {
     const productosRef = collection(db, PRODUCTOS_COL);
@@ -214,4 +219,56 @@ export async function getActivityLogs(idNegocio: string) {
     const q = query(collection(db, LOGS_COL), where("id_negocio", "==", idNegocio));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// ============================================
+// SERVICIOS: RESEÑAS / RATING
+// ============================================
+const RESENAS_COL = "resenas";
+
+export async function submitResena(idNegocio: string, data: {
+    cliente_id: string;
+    cliente_nombre: string;
+    puntuacion: number;
+    comentario?: string;
+}) {
+    const resenasRef = collection(db, RESENAS_COL);
+    const docRef = await addDoc(resenasRef, {
+        ...data,
+        id_negocio: idNegocio,
+        createdAt: serverTimestamp(),
+    });
+
+    const negocioRef = doc(db, NEGOCIOS_COL, idNegocio);
+    const negocioSnap = await getDoc(negocioRef);
+    if (negocioSnap.exists()) {
+        const negocioData = negocioSnap.data();
+        const existingRating = negocioData.rating || { promedio: 0, total_resenas: 0, distribucion: [0, 0, 0, 0, 0] };
+        const newTotal = existingRating.total_resenas + 1;
+        const newPromedio = ((existingRating.promedio * existingRating.total_resenas) + data.puntuacion) / newTotal;
+        const distribucion = [...(existingRating.distribucion || [0, 0, 0, 0, 0])];
+        distribucion[5 - data.puntuacion] = Math.round((distribucion[5 - data.puntuacion] * existingRating.total_resenas + 100) / newTotal);
+
+        await updateDoc(negocioRef, {
+            rating: {
+                promedio: Math.round(newPromedio * 10) / 10,
+                total_resenas: newTotal,
+                distribucion,
+            },
+        });
+    }
+
+    return docRef.id;
+}
+
+export async function getResenasByNegocio(idNegocio: string) {
+    const q = query(collection(db, RESENAS_COL), where("id_negocio", "==", idNegocio));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function hasUserReviewed(idNegocio: string, clienteId: string) {
+    const q = query(collection(db, RESENAS_COL), where("id_negocio", "==", idNegocio), where("cliente_id", "==", clienteId));
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
 }

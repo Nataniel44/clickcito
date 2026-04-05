@@ -8,10 +8,12 @@ import { db, auth } from "@/app/firebase/config";
 import { signOut } from "firebase/auth";
 import { createProducto, updateProducto, deleteProducto, createNegocio, updateNegocio, getAllUsuariosByRol, getAllNegocios, updateUsuario, updateEstadoTransaccion, createActivityLog, deleteTransaccion, deleteTransaccionesBatch } from "@/app/firebase/db";
 import toast from "react-hot-toast";
-import { Menu, Bell, Eye } from "lucide-react";
+import { Menu } from "lucide-react";
 
 // Components
 import { Sidebar } from "./components/Sidebar";
+import { DashboardHeader } from "./components/DashboardHeader";
+import { useSidebarItems } from "./components/useSidebarItems";
 import { DashboardOverview } from "./components/DashboardOverview";
 import { OrdersPanel } from "./components/OrdersPanel";
 import { ProductsPanel } from "./components/ProductsPanel";
@@ -40,9 +42,9 @@ export default function DashboardPage() {
     const [customDate, setCustomDate] = useState("");
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("dashboard");
-    const [showNotifications, setShowNotifications] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [negocioData, setNegocioData] = useState<any | null>(null);
+    const { mainItems } = useSidebarItems({ user, negocio: negocioData });
     const [bannerText, setBannerText] = useState("");
     const [isUpdatingBanner, setIsUpdatingBanner] = useState(false);
     const [statsPeriod, setStatsPeriod] = useState("7d");
@@ -747,15 +749,7 @@ export default function DashboardPage() {
         ),
     };
 
-    const isAdmin = user?.rol === "admin_clickcito" || user?.rol === "admin";
-    const isElysOwner = user?.id_negocio === "elysrestobar";
-    const ELYS_ONLY_ITEM = ADMIN_SIDEBAR_ITEMS.find(i => i.id === "productos_elys");
-    const ALL_SIDEBAR_ITEMS = [
-        ...BASE_SIDEBAR_ITEMS,
-        ...(isAdmin ? ADMIN_SIDEBAR_ITEMS : []),
-        ...(!isAdmin && isElysOwner && ELYS_ONLY_ITEM ? [ELYS_ONLY_ITEM] : []),
-    ];
-    const tabLabel = ALL_SIDEBAR_ITEMS.find(i => i.id === activeTab)?.label || "Dashboard";
+    const tabLabel = mainItems.find(i => i.id === activeTab)?.label || "Dashboard";
 
     return (
         <div className="flex min-h-screen bg-[#F8F8F8] dark:bg-[#0A0A0A] text-gray-900 dark:text-zinc-100">
@@ -763,11 +757,10 @@ export default function DashboardPage() {
                 user={user}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
-                setIsSidebarOpen={setIsSidebarOpen}
                 isSidebarOpen={isSidebarOpen}
+                onClose={() => setIsSidebarOpen(false)}
                 metrics={metrics}
-                handleLogout={handleLogout}
-                router={router}
+                onLogout={handleLogout}
                 loading={loading}
                 negocio={negocioData}
             />
@@ -776,66 +769,19 @@ export default function DashboardPage() {
 
             <main className="flex-1 min-w-0 lg:ml-72 min-h-screen">
                 <div className="max-w-[1200px] mx-auto p-4 md:p-8">
-                    <div className="sticky top-0 z-40 bg-[#F8F8F8]/80 dark:bg-[#0A0A0A]/80 backdrop-blur-lg -mx-4 px-4 py-4 mb-6 md:-mx-8 md:px-8 md:py-6 md:mb-8 border-b border-gray-100 dark:border-zinc-800 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:p-0 lg:m-0 lg:mb-10 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 bg-white dark:bg-zinc-900 rounded-xl border border-gray-100 dark:border-zinc-800 shadow-sm active:scale-95 transition-all"><Menu size={20} /></button>
-                            <div>
-                                {loading ? (
-                                    <div className="h-3 w-24 bg-gray-100 dark:bg-zinc-800 rounded-full animate-pulse mb-1" />
-                                ) : (
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">{user?.id_negocio || "Panel"}</p>
-                                )}
-                                <h1 className="text-xl md:text-3xl font-black tracking-tight">{tabLabel}</h1>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2 relative">
-                            <button onClick={() => setShowNotifications(!showNotifications)} className="relative p-2 bg-white dark:bg-zinc-800 rounded-xl border border-gray-100 dark:border-zinc-800 hover:border-orange-500 transition-all active:scale-95">
-                                <Bell size={18} className={showNotifications ? "text-orange-500" : "text-gray-500"} />
-                                {metrics.pendientes > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />}
-                            </button>
-
-                            {showNotifications && (
-                                <>
-                                    <div className="fixed inset-0 z-[60]" onClick={() => setShowNotifications(false)} />
-                                    <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 shadow-2xl z-[70] overflow-hidden animate-in fade-in zoom-in duration-200 origin-top-right">
-                                        <div className="p-4 border-b border-gray-100 dark:border-zinc-800 flex justify-between items-center bg-gray-50/50 dark:bg-zinc-800/50">
-                                            <h3 className="font-black text-sm">Notificaciones</h3>
-                                            <span className="text-[10px] font-black bg-orange-100 dark:bg-orange-600/20 text-orange-600 px-2 py-0.5 rounded-full">
-                                                {metrics.pendientes} Pendientes
-                                            </span>
-                                        </div>
-                                        <div className="max-h-96 overflow-y-auto no-scrollbar">
-                                            {ordenes.filter(o => o.estado === "pendiente" || o.estado === "en_preparacion").length === 0 ? (
-                                                <div className="p-8 text-center">
-                                                    <Bell size={32} className="mx-auto text-gray-200 dark:text-zinc-800 mb-2" />
-                                                    <p className="text-xs font-bold text-gray-400">No hay pedidos pendientes</p>
-                                                </div>
-                                            ) : (
-                                                ordenes.filter(o => o.estado === "pendiente" || o.estado === "en_preparacion").map(o => (
-                                                    <div key={o.id_transaccion} className="p-4 border-b border-gray-50 dark:border-zinc-800/50 hover:bg-gray-50 dark:hover:bg-zinc-800/50 transition-colors group">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <p className="text-xs font-black truncate max-w-[120px]">{o.datos_logistica?.telefono_contacto || "Cliente"}</p>
-                                                            <span className="text-[10px] font-bold text-gray-400">{o.estado === "pendiente" ? "Pendiente" : "Preparando"}</span>
-                                                        </div>
-                                                        <p className="text-[10px] text-gray-500 line-clamp-1 mb-2">{o.items?.map((i: any) => i.nombre_producto).join(", ")}</p>
-                                                        <div className="flex gap-2">
-                                                            <button onClick={(e) => { e.stopPropagation(); handleCambiarEstado(o.id_transaccion, o.estado === "pendiente" ? "en_preparacion" : "en_camino"); }} className="flex-1 py-1.5 bg-orange-600 text-white text-[10px] font-black rounded-lg hover:bg-orange-700 transition-colors">
-                                                                {o.estado === "pendiente" ? "Aceptar" : "Despachar"}
-                                                            </button>
-                                                            <button onClick={() => { setSelectedOrder(o); setShowNotifications(false); }} className="px-2 py-1.5 bg-gray-100 dark:bg-zinc-800 text-gray-500 rounded-lg hover:bg-gray-200 transition-colors">
-                                                                <Eye size={12} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                        <button onClick={() => { setActiveTab("ordenes"); setShowNotifications(false); }} className="w-full py-3 text-[10px] font-black text-gray-400 hover:text-orange-600 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-all border-t border-gray-100 dark:border-zinc-800">Ver todas las órdenes</button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                    <DashboardHeader
+                        tabLabel={tabLabel}
+                        loading={loading}
+                        user={user}
+                        isSidebarOpen={isSidebarOpen}
+                        onToggleSidebar={() => setIsSidebarOpen(true)}
+                        ordenes={ordenes}
+                        pendientes={metrics.pendientes}
+                        selectedOrder={selectedOrder}
+                        onSelectOrder={setSelectedOrder}
+                        onCambiarEstado={handleCambiarEstado}
+                        onVerOrdenes={() => setActiveTab("ordenes")}
+                    />
 
                     {PANEL_MAP[activeTab]?.() || PANEL_MAP.dashboard()}
 

@@ -9,10 +9,10 @@ import { RUBRO_CONFIG, Negocio } from "@/components/explorar/types";
 import { BusinessCard } from "@/components/explorar/BusinessCard";
 import { BusinessResultItem } from "@/components/explorar/BusinessResultItem";
 import { SectionCarousel } from "@/components/explorar/SectionCarousel";
-import { ExploreHero } from "@/components/explorar/ExploreHero";
 import { PromoBanner } from "@/components/explorar/PromoBanner";
 import { EmptyResults } from "@/components/explorar/EmptyResults";
 import { ExternalBusinessCard } from "@/components/explorar/ExternalBusinessCard";
+import { ProductCarousel } from "@/components/explorar/ProductCarousel";
 import { getNearbyBusinesses, OSMBusiness, searchLocation, reverseGeocode } from "@/app/utils/osm";
 import { FooterCTA } from "@/components/explorar/FooterCTA";
 import { isBusinessOpen } from "@/app/utils/businessUtils";
@@ -85,9 +85,43 @@ export default function ExplorarPage() {
         }
     }, [userLocation]);
 
-    const lastScrollY = useRef(0);
-    const [showNavbar, setShowNavbar] = useState(true);
     const resultsRef = useRef<HTMLDivElement>(null);
+    const stickyHeaderRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let ticking = false;
+        let lastScrollY = window.scrollY;
+        let isNavbarVisible = true;
+
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    if (currentScrollY < lastScrollY || currentScrollY < 100) {
+                        if (!isNavbarVisible) {
+                            isNavbarVisible = true;
+                            if (stickyHeaderRef.current) {
+                                stickyHeaderRef.current.style.top = '68px';
+                            }
+                        }
+                    } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                        if (isNavbarVisible) {
+                            isNavbarVisible = false;
+                            if (stickyHeaderRef.current) {
+                                stickyHeaderRef.current.style.top = '0px';
+                            }
+                        }
+                    }
+                    lastScrollY = currentScrollY;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     const isIdle = searchTerm === "" && activeRubro === "todos" && !userLocation;
 
@@ -120,21 +154,6 @@ export default function ExplorarPage() {
             return () => clearTimeout(timer);
         }
     }, [activeRubro, searchTerm, isIdle, userLocation]);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-            if (currentScrollY < lastScrollY.current || currentScrollY < 10) {
-                setShowNavbar(true);
-            } else if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
-                setShowNavbar(false);
-            }
-            lastScrollY.current = currentScrollY;
-        };
-
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
 
     const handleGetLocation = () => {
         if (!navigator.geolocation) return;
@@ -244,24 +263,16 @@ export default function ExplorarPage() {
         <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#060606] selection:bg-orange-100 selection:text-orange-600 pt-28 md:pt-28 pb-20">
             <div className="max-w-8xl mx-auto px-6">
 
-                <ExploreHero
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    activeRubro={activeRubro}
-                    setActiveRubro={setActiveRubro}
-                    onLocationClick={handleGetLocation}
-                    isLocating={isLocating}
-                    onManualLocation={handleManualLocation}
-                    locationName={locationName}
-                />
+                <ProductCarousel />
 
 
                 <div ref={resultsRef} className="animate-fade-in max-w-5xl mx-auto">
                     <div className="flex flex-col gap-6">
                         {/* Sticky Search Header - Integrated with Navbar on Mobile */}
                         <div
+                            ref={stickyHeaderRef}
                             className="sticky z-30 -mx-4 md:mx-0 px-4 py-3 md:py-4 bg-[#FDFDFD] dark:bg-[#060606] border-b border-gray-100 dark:border-zinc-800/80 shadow-sm md:shadow-none transition-all duration-500 ease-in-out"
-                            style={{ top: showNavbar ? '68px' : '0px' }}
+                            style={{ top: '68px' }}
                         >
                             <div className="flex flex-col gap-2.5 max-w-5xl mx-auto">
                                 <div className="flex items-center justify-between">

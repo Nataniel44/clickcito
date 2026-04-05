@@ -24,6 +24,7 @@ export function OrderRow({
     const sc = STATUS_CONFIG[orden.estado] || STATUS_CONFIG.pendiente;
     const StatusIcon = sc.icon;
     const total = orden.items?.reduce((a: number, i: any) => a + i.precio_unitario * i.cantidad, 0) || 0;
+    const customerName = orden.datos_logistica?.nombre_contacto || orden.nombre_contacto || null;
 
     const handleActionWA = (estado_nuevo: string) => {
         handleCambiarEstado(orden.id_transaccion, estado_nuevo);
@@ -55,8 +56,13 @@ export function OrderRow({
                     <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap ${sc.color}`}>
                         <StatusIcon size={12} />{sc.label}
                     </span>
+                    {customerName && (
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap bg-violet-100 text-violet-700 dark:bg-violet-600/20 dark:text-violet-400">
+                            {customerName}
+                        </span>
+                    )}
                 </div>
-                <p className="font-bold text-sm truncate">{orden.datos_logistica?.telefono_contacto || `Cliente ${orden.id_usuario?.slice(0, 5) || "???"}`}</p>
+                <p className="font-bold text-sm truncate">{customerName || orden.datos_logistica?.telefono_contacto || `Cliente ${orden.id_usuario?.slice(0, 5) || "???"}`}</p>
                 <p className="text-xs text-gray-400 font-medium truncate">{orden.items?.length || 0} items • {orden.datos_logistica?.direccion_envio || "Sin dirección"}</p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-2 md:gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-50 dark:border-zinc-800/50">

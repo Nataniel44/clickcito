@@ -8,8 +8,10 @@ interface BusinessDetailsSectionProps {
     onShare: () => void;
     onMaps: () => void;
     onWhatsapp: () => void;
+    onRate: () => void;
     diasSemana: { key: string; label: string }[];
     currentDayIndex: number;
+    hasReviewed?: boolean;
 }
 
 export function BusinessDetailsSection({
@@ -18,8 +20,10 @@ export function BusinessDetailsSection({
     onShare,
     onMaps,
     onWhatsapp,
+    onRate,
     diasSemana,
-    currentDayIndex
+    currentDayIndex,
+    hasReviewed
 }: BusinessDetailsSectionProps) {
     const rating = negocio.rating || null;
     const logistica = negocio.configuracion_logistica || {};
@@ -114,8 +118,12 @@ export function BusinessDetailsSection({
                                         </div>
                                     ))}
                                 </div>
-                                <button className="text-[11px] font-black text-orange-600 bg-orange-50 dark:bg-orange-600/10 px-3 py-2 rounded-xl shrink-0 border border-orange-100 dark:border-orange-600/20 hover:bg-orange-100 transition-colors">
-                                    + Reseña
+                                <button
+                                    onClick={onRate}
+                                    disabled={hasReviewed}
+                                    className="text-[11px] font-black text-orange-600 bg-orange-50 dark:bg-orange-600/10 px-3 py-2 rounded-xl shrink-0 border border-orange-100 dark:border-orange-600/20 hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {hasReviewed ? "✓ Opinaste" : "+ Reseña"}
                                 </button>
                             </div>
                         ) : (
@@ -127,8 +135,12 @@ export function BusinessDetailsSection({
                                     <p className="text-[13px] font-bold text-gray-900 dark:text-white">Sin reseñas aún</p>
                                     <p className="text-[11px] text-gray-400 mt-0.5">¡Sé el primero en opinar!</p>
                                 </div>
-                                <button className="text-[11px] font-black text-orange-600 bg-orange-50 dark:bg-orange-600/10 px-3 py-2 rounded-xl border border-orange-100 dark:border-orange-600/20 whitespace-nowrap hover:bg-orange-100 transition-colors">
-                                    + Reseña
+                                <button
+                                    onClick={onRate}
+                                    disabled={hasReviewed}
+                                    className="text-[11px] font-black text-orange-600 bg-orange-50 dark:bg-orange-600/10 px-3 py-2 rounded-xl border border-orange-100 dark:border-orange-600/20 whitespace-nowrap hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {hasReviewed ? "✓ Opinaste" : "+ Reseña"}
                                 </button>
                             </div>
                         )}

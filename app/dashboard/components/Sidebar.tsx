@@ -3,96 +3,120 @@
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { X, ArrowUpRight, LogOut } from "lucide-react";
-import { BASE_SIDEBAR_ITEMS, EXTERNAL_LINKS, ADMIN_SIDEBAR_ITEMS, EDUCATION_SIDEBAR_ITEMS } from "./constants";
+import { EXTERNAL_LINKS } from "./constants";
+import { useSidebarItems } from "./useSidebarItems";
+
+interface SidebarProps {
+    user: any;
+    activeTab: string;
+    setActiveTab: (id: string) => void;
+    isSidebarOpen: boolean;
+    onClose: () => void;
+    metrics: { pendientes: number };
+    onLogout: () => void;
+    loading: boolean;
+    negocio?: any;
+}
 
 export function Sidebar({
     user,
     activeTab,
     setActiveTab,
-    setIsSidebarOpen,
     isSidebarOpen,
+    onClose,
     metrics,
-    handleLogout,
-    router,
+    onLogout,
     loading,
     negocio
-}: {
-    user: any;
-    activeTab: string;
-    setActiveTab: (id: string) => void;
-    setIsSidebarOpen: (open: boolean) => void;
-    isSidebarOpen: boolean;
-    metrics: any;
-    handleLogout: () => void;
-    router: any;
-    loading: boolean;
-    negocio?: any;
-}) {
-    const isEducation = negocio?.rubro?.toLowerCase().includes("educacion") || negocio?.rubro?.toLowerCase().includes("academia");
-    const isAdmin = user?.rol === "admin_clickcito" || user?.rol === "admin";
-    const isElys = user?.id_negocio === "elysrestobar" || negocio?.id_negocio === "elysrestobar";
+}: SidebarProps) {
+    const router = useRouter();
+    const { mainItems, educationItems, isEducation } = useSidebarItems({ user, negocio });
 
-    const ALL_SIDEBAR_ITEMS = [
-        ...BASE_SIDEBAR_ITEMS,
-        ...(isAdmin ? ADMIN_SIDEBAR_ITEMS.filter(i => i.id !== "productos_elys") : []),
-        ...(isAdmin || isElys ? ADMIN_SIDEBAR_ITEMS.filter(i => i.id === "productos_elys") : []),
-    ];
+    const handleNavigate = (id: string) => {
+        setActiveTab(id);
+        onClose();
+    };
+
+    const handleExternalLink = (path: string) => {
+        router.push(path);
+    };
 
     return (
         <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-zinc-900 border-r border-gray-100 dark:border-zinc-800 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
             <div className="flex flex-col h-full p-5">
-                <div className="flex items-center gap-3 mb-10">
-                    <Link href="/">
-                        <Image src="/log.png" alt="Logo" width={200} height={100} />
+                {/* Logo */}
+                <div className="flex items-center gap-3 mb-8">
+                    <Link href="/" className="shrink-0">
+                        <Image src="/log.png" alt="Logo" width={200} height={100} className="h-8 w-auto" />
                     </Link>
-                    <button onClick={() => setIsSidebarOpen(false)} className="ml-auto lg:hidden p-1.5 bg-gray-100 dark:bg-zinc-800 rounded-lg"><X size={18} /></button>
+                    <button
+                        onClick={onClose}
+                        className="ml-auto lg:hidden p-1.5 bg-gray-100 dark:bg-zinc-800 rounded-lg hover:bg-gray-200 dark:hover:bg-zinc-700 transition-colors"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
 
-                <nav className="flex-1 space-y-1 overflow-y-auto pr-2 custom-scrollbar">
-                    {/* Sección Academia (Solo educación) */}
-                    {isEducation && (
-                        <div className="mb-6 space-y-1">
-                            <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-4 mb-2">Centro de Formación</p>
-                            {EDUCATION_SIDEBAR_ITEMS.map(item => (
-                                <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === item.id
-                                        ? "bg-orange-50 text-orange-600 dark:bg-orange-600/10 dark:text-orange-500"
-                                        : "text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-200"
-                                        }`}>
-                                    <item.icon size={20} strokeWidth={2.5} />{item.label}
-                                </button>
-                            ))}
+                {/* Navigation */}
+                <nav className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+                    {/* Education Section */}
+                    {isEducation && educationItems.length > 0 && (
+                        <div>
+                            <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest px-3 mb-2">Centro de Formación</p>
+                            <div className="space-y-0.5">
+                                {educationItems.map(item => (
+                                    <SidebarItem
+                                        key={item.id}
+                                        item={item}
+                                        isActive={activeTab === item.id}
+                                        onClick={() => handleNavigate(item.id)}
+                                        activeColor="orange"
+                                    />
+                                ))}
+                            </div>
                         </div>
                     )}
 
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">Gestión de Negocio</p>
-                    {ALL_SIDEBAR_ITEMS.map(item => (
-                        <button key={item.id} onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === item.id
-                                ? "bg-orange-50 text-orange-600 dark:bg-orange-600/10 dark:text-orange-500"
-                                : "text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-200"
-                                }`}>
-                            <item.icon size={20} strokeWidth={2.5} />{item.label}
-                            {item.id === "ordenes" && metrics.pendientes > 0 && (
-                                <span className="ml-auto bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">{metrics.pendientes}</span>
-                            )}
-                        </button>
-                    ))}
+                    {/* Main Management Section */}
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3 mb-2">Gestión de Negocio</p>
+                        <div className="space-y-0.5">
+                            {mainItems.map(item => (
+                                <SidebarItem
+                                    key={item.id}
+                                    item={item}
+                                    isActive={activeTab === item.id}
+                                    onClick={() => handleNavigate(item.id)}
+                                    activeColor="orange"
+                                    badge={item.id === "ordenes" && metrics.pendientes > 0 ? metrics.pendientes : undefined}
+                                />
+                            ))}
+                        </div>
+                    </div>
 
-                    <div className="pt-4 mt-4 border-t border-gray-100 dark:border-zinc-800">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-2">Navegación</p>
-                        {EXTERNAL_LINKS.map(item => (
-                            <button key={item.id} onClick={() => router.push(item.path)}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-200 transition-all">
-                                <item.icon size={20} strokeWidth={2.5} />{item.label}
-                                <ArrowUpRight size={14} className="ml-auto opacity-30" />
-                            </button>
-                        ))}
+                    {/* External Links */}
+                    <div className="pt-2 border-t border-gray-100 dark:border-zinc-800">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3 mb-2">Navegación</p>
+                        <div className="space-y-0.5">
+                            {EXTERNAL_LINKS.map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => handleExternalLink(item.path)}
+                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-200 transition-all"
+                                >
+                                    <item.icon size={18} strokeWidth={2} />
+                                    <span>{item.label}</span>
+                                    <ArrowUpRight size={14} className="ml-auto opacity-30" />
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </nav>
 
-                <div className="mt-auto pt-4 border-t border-gray-100 dark:border-zinc-800">
+                {/* User Footer */}
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
                     {loading ? (
                         <div className="flex items-center gap-3 p-2 w-full animate-pulse">
                             <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-zinc-800 shrink-0" />
@@ -103,7 +127,7 @@ export function Sidebar({
                         </div>
                     ) : (
                         <div className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-zinc-800/50 rounded-xl mb-3">
-                            <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-600/20 flex items-center justify-center text-orange-600 font-black text-sm">
+                            <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-600/20 flex items-center justify-center text-orange-600 font-black text-sm shrink-0">
                                 {user?.nombre?.charAt(0) || "U"}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -112,11 +136,49 @@ export function Sidebar({
                             </div>
                         </div>
                     )}
-                    <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-red-500 font-bold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                        <LogOut size={16} /> Cerrar Sesión
+                    <button
+                        onClick={onLogout}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-red-500 font-bold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                    >
+                        <LogOut size={16} />
+                        Cerrar Sesión
                     </button>
                 </div>
             </div>
         </aside>
+    );
+}
+
+interface SidebarItemProps {
+    item: { id: string; icon: React.ElementType; label: string };
+    isActive: boolean;
+    onClick: () => void;
+    activeColor?: string;
+    badge?: number;
+}
+
+function SidebarItem({ item, isActive, onClick, activeColor = "orange", badge }: SidebarItemProps) {
+    const activeClasses = {
+        orange: "bg-orange-50 text-orange-600 dark:bg-orange-600/10 dark:text-orange-500",
+        blue: "bg-blue-50 text-blue-600 dark:bg-blue-600/10 dark:text-blue-500",
+    };
+
+    return (
+        <button
+            onClick={onClick}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all ${
+                isActive
+                    ? activeClasses[activeColor as keyof typeof activeClasses] || activeClasses.orange
+                    : "text-gray-500 hover:bg-gray-50 dark:hover:bg-zinc-800/50 hover:text-gray-900 dark:hover:text-zinc-200"
+            }`}
+        >
+            <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+            <span className="flex-1 text-left">{item.label}</span>
+            {badge !== undefined && (
+                <span className="bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
+                    {badge}
+                </span>
+            )}
+        </button>
     );
 }

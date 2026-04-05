@@ -16,6 +16,7 @@ import { ProductListSection } from "./components/ProductListSection";
 import { BusinessDetailsSection } from "./components/BusinessDetailsSection";
 import { StickyCartBar } from "./components/StickyCartBar";
 import { PhotoLightbox } from "./components/PhotoLightbox";
+import { RatingModal } from "./components/RatingModal";
 
 // Emojis / colores por rubro
 const RUBRO_EMOJI: Record<string, string> = {
@@ -51,6 +52,8 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const [activePhotoIndex, setActivePhotoIndex] = useState<number | null>(null);
     const [isScrolled, setIsScrolled] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [showRating, setShowRating] = useState(false);
+    const [hasReviewed, setHasReviewed] = useState(false);
 
     // ScrollSpy States
     const [activeCategory, setActiveCategory] = useState<string>("");
@@ -123,6 +126,14 @@ export default function NegocioClient({ slug }: { slug: string }) {
         }
         fetchData();
     }, [slug, user?.uid]);
+
+    const handleRatingSuccess = async () => {
+        setHasReviewed(true);
+        if (slug) {
+            const updatedNegocio = await getNegocioById(slug);
+            if (updatedNegocio) setNegocio(updatedNegocio);
+        }
+    };
 
     useEffect(() => {
         const handleScroll = () => {
@@ -410,8 +421,10 @@ export default function NegocioClient({ slug }: { slug: string }) {
                         onShare={handleShare}
                         onMaps={handleMaps}
                         onWhatsapp={handleWhatsapp}
+                        onRate={() => setShowRating(true)}
                         diasSemana={DIAS_SEMANA}
                         currentDayIndex={currentDayIndex}
+                        hasReviewed={hasReviewed}
                     />
                 </div>
             </main>
@@ -445,6 +458,17 @@ export default function NegocioClient({ slug }: { slug: string }) {
                     onClose={() => setSelectedProduct(null)}
                     onAddToCart={(qty, extras) => handleAddProduct(selectedProduct, qty, extras)}
                     accent={accent}
+                />
+            )}
+
+            {showRating && user && negocio && (
+                <RatingModal
+                    idNegocio={negocio.id}
+                    negocioNombre={negocio.nombre}
+                    clienteId={user.uid}
+                    clienteNombre={user.nombre || "Cliente"}
+                    onClose={() => setShowRating(false)}
+                    onSuccess={handleRatingSuccess}
                 />
             )}
 

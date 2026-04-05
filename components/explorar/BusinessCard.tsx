@@ -1,16 +1,19 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { RUBRO_CONFIG, Negocio } from "./types";
 import { resolveImageUrl } from "@/app/utils/imageUtils";
-import { useState } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 
-export function BusinessCard({ negocio }: { negocio: Negocio }) {
-    const [loadingImage, setLoadingImage] = useState(true);
+const loadedImages = new Set<string>();
+
+export const BusinessCard = memo(function BusinessCard({ negocio }: { negocio: Negocio }) {
+    const logoUrl = negocio.logo_url ? resolveImageUrl(negocio.logo_url) : "";
+    const wasLoaded = logoUrl ? loadedImages.has(logoUrl) : true;
+    const [isLoaded, setIsLoaded] = useState(wasLoaded);
+    const imgRef = useRef<HTMLImageElement | null>(null);
     const config = RUBRO_CONFIG[negocio.rubro] || RUBRO_CONFIG.default;
 
-    // Improved Logic for "isOpen" with time parsing
     const ahora = new Date();
     const currentDayIndex = ahora.getDay() === 0 ? 6 : ahora.getDay() - 1;
     const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
@@ -23,8 +26,6 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
         if (todaysHours === "Cerrado") return false;
 
         const currentTime = ahora.getHours() * 60 + ahora.getMinutes();
-
-        // Formatos soportados: "20:00 - 00:00", "11:00 - 15:00, 20:00 - 00:00", "11:00 a 15:00"
         const spans = todaysHours.split(',').map(s => s.trim());
 
         for (const span of spans) {
@@ -39,7 +40,6 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
             const startTotal = startH * 60 + (startM || 0);
             let endTotal = endH * 60 + (endM || 0);
 
-            // Handle midnight (00:00 is technically 1440 mins)
             if (endTotal <= startTotal) endTotal += 1440;
 
             if (currentTime >= startTotal && currentTime < endTotal) return true;
@@ -52,7 +52,6 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
     const realRating = negocio.rating || null;
     const ratingAvg = realRating?.total_resenas && realRating.total_resenas > 0 ? Number(realRating.promedio).toFixed(1) : null;
 
-    // Tags por defecto basados en el rubro
     const defaultTags = config.label === "Gastronomía" ? ["🍕 Pizzas", "🥟 Empanadas", "🍝 Pastas"]
         : config.label === "Moda y Tiendas" ? ["👗 Ropa", "👕 Remeras"]
             : config.label === "Servicios" ? ["✂️ Cortes", "💇 Coloración"]
@@ -67,28 +66,36 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
         window.open(`https://wa.me/${telefono.replace(/\D/g, '')}?text=${text}`, '_blank');
     };
 
+    useEffect(() => {
+        if (wasLoaded || !logoUrl) return;
+        if (imgRef.current?.complete) {
+            loadedImages.add(logoUrl);
+            setIsLoaded(true);
+        }
+    }, [wasLoaded, logoUrl]);
+
     return (
         <Link
             href={"/negocio/" + negocio.id}
             className={`group bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-[1.25rem] p-3 md:p-3.5 flex flex-col gap-2 md:gap-2.5 cursor-pointer transition-all hover:border-gray-300 dark:hover:border-zinc-700 hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-zinc-900/50 ${!isOpen ? "opacity-75" : ""}`}
         >
-            {/* Top row */}
             <div className="flex items-start gap-2 md:gap-2.5">
                 <div className="w-[40px] h-[40px] md:w-[46px] md:h-[46px] rounded-xl bg-gray-50 dark:bg-zinc-800 flex items-center justify-center shrink-0 relative text-xl">
                     {negocio.logo_url ? (
                         <>
-                            {loadingImage && (
-                                <div className="absolute inset-0 bg-gray-100 dark:bg-zinc-800 animate-pulse z-10" />
+                            {!isLoaded && (
+                                <div className="absolute inset-0 bg-gray-100 dark:bg-zinc-800 animate-pulse z-10 rounded-xl" />
                             )}
-                            <Image
-                                src={resolveImageUrl(negocio.logo_url)}
+                            <img
+                                ref={imgRef}
+                                src={logoUrl}
                                 alt={negocio.nombre}
-                                width={46}
-                                height={46}
-                                className={`w-full h-full object-cover rounded-xl transition-all duration-700 ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'}`}
-                                unoptimized
-                                onLoad={() => setLoadingImage(false)}
-                                onError={() => setLoadingImage(false)}
+                                className={`w-full h-full object-cover rounded-xl ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+                                onLoad={() => {
+                                    loadedImages.add(logoUrl);
+                                    setIsLoaded(true);
+                                }}
+                                onError={() => setIsLoaded(true)}
                             />
                         </>
                     ) : (
@@ -109,7 +116,6 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
                 </div>
             </div>
 
-            {/* Rating row */}
             <div className="flex items-center gap-1 text-[10px] md:text-[11px] font-medium text-gray-600 dark:text-gray-300">
                 <span className={`text-[10px] md:text-[11px] tracking-tight md:tracking-widest ${ratingAvg ? "text-amber-500" : "text-gray-300 dark:text-zinc-600"}`}>★★★★★</span>
                 {ratingAvg ? (
@@ -119,12 +125,10 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
                 )}
             </div>
 
-            {/* Desc - Hidden or reduced on small mobile */}
             <p className="text-[11px] md:text-[12px] text-gray-500 dark:text-gray-400 leading-[1.5] line-clamp-2 min-h-[33px] md:min-h-[36px]">
                 {negocio.descripcion || "Ingresá para ver sus productos."}
             </p>
 
-            {/* Tags array - Only first 2 for mobile */}
             {tags && tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-0.5 overflow-hidden">
                     {tags.slice(0, 3).map((tag: string, i: number) => (
@@ -135,7 +139,6 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
                 </div>
             )}
 
-            {/* Meta Row (Location & Status) */}
             <div className="flex items-center gap-1 text-[10px] md:text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                 <span className="truncate">{negocio.ubicacion || "Misiones"}</span>
@@ -147,7 +150,6 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
                 )}
             </div>
 
-            {/* Action Row */}
             <div className="flex items-center gap-1.5 mt-auto pt-1">
                 <div className="flex-1 py-1.5 md:py-2 border border-blue-500/10 dark:border-zinc-700/80 rounded-[8px] md:rounded-[10px] text-[11px] md:text-[12px] font-semibold text-orange-600 dark:text-orange-500 bg-orange-50/50 dark:bg-orange-500/5 flex items-center justify-center gap-1 transition-all group-hover:bg-[#D85A30] group-hover:text-white group-hover:border-[#D85A30]">
                     Entrar
@@ -158,4 +160,4 @@ export function BusinessCard({ negocio }: { negocio: Negocio }) {
             </div>
         </Link>
     );
-}
+});
