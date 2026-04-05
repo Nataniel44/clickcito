@@ -33,8 +33,8 @@ export function ProductCarousel() {
     const [loading, setLoading] = useState(true);
     const carouselRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const intervalRef = useRef<ReturnType<typeof setInterval>>();
-    const resumeTimeout = useRef<ReturnType<typeof setTimeout>>();
+    const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
+    const resumeTimeout = useRef<ReturnType<typeof setTimeout>>(null);
 
     useEffect(() => {
         async function fetchData() {
