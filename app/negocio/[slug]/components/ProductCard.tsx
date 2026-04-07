@@ -61,6 +61,15 @@ interface ProductCardProps {
 export const ProductCard = memo(function ProductCard({ prod, onAdd, onOpenDetail, accent, isAdded, fallbackEmoji, isClosed, purchased }: ProductCardProps) {
     const hasAccess = !!purchased;
     const unitInfo = useMemo(() => resolveUnit(prod.detalles_especificos), [prod.detalles_especificos]);
+    const displayPrice = useMemo(() => {
+        const base = Number(prod.precio_base) || 0;
+        if (base > 0) return base;
+        const opciones = prod.opciones || [];
+        if (opciones.length > 0) {
+            return Math.min(...opciones.map((o: any) => Number(o.precio) || 0));
+        }
+        return 0;
+    }, [prod.precio_base, prod.opciones]);
     const [qty, setQty] = useState(unitInfo.step);
     const [animating, setAnimating] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -150,7 +159,7 @@ export const ProductCard = memo(function ProductCard({ prod, onAdd, onOpenDetail
 
                 <div className="flex items-center gap-1.5">
                     <span className="text-[17px] font-black text-gray-900 dark:text-white">
-                        ${Number(prod.precio_base).toLocaleString('es-AR')}
+                        ${displayPrice.toLocaleString('es-AR')}
                     </span>
                     {unitInfo.priceLabel && (
                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{unitInfo.priceLabel}</span>

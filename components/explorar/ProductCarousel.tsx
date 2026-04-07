@@ -212,6 +212,15 @@ export function ProductCarousel() {
 
     return (
         <div ref={containerRef} className="w-full mb-8 md:mb-12">
+            <div className="flex items-center gap-3 mb-4 px-1">
+                <div className="p-2.5 bg-orange-50 dark:bg-orange-600/10 rounded-xl text-orange-600 shadow-sm shadow-orange-500/5">
+                    <span className="text-lg" role="img" aria-label="icon">🔥</span>
+                </div>
+                <div>
+                    <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-tight">Productos destacados</h2>
+                    <p className="text-[12px] text-gray-500 font-medium mt-0.5">Lo más pedido cerca tuyo</p>
+                </div>
+            </div>
             <div
                 ref={carouselRef}
                 className="flex gap-4 md:gap-6 overflow-x-auto cursor-grab snap-x snap-mandatory custom-scrollbar"
@@ -260,7 +269,7 @@ export function ProductCarousel() {
                                         {prod.negocioNombre}
                                     </p>
                                     <p className="text-[16px] md:text-[18px] font-black text-orange-600 dark:text-orange-500 mt-2">
-                                        ${Number(prod.precio_base).toLocaleString("es-AR")}
+                                        ${(Number(prod.precio_base) || 0).toLocaleString("es-AR")}
                                     </p>
                                 </div>
                             </div>

@@ -93,7 +93,9 @@ export default function NegocioClient({ slug }: { slug: string }) {
                 if (dataNegocio) {
                     setNegocio(dataNegocio);
                     const dataProductos = await getProductosByNegocio(slug);
-                    setProductos(dataProductos);
+                    // Filtrar productos activos (estado !== "inactivo")
+                    const productosActivos = dataProductos.filter((p: any) => p.estado !== "inactivo");
+                    setProductos(productosActivos);
 
                     // Buscar compras del usuario para este negocio
                     if (user?.uid) {
@@ -160,15 +162,25 @@ export default function NegocioClient({ slug }: { slug: string }) {
     const categoriasOrdenadas = useMemo(() => {
         const agruped = Object.keys(productosPorTipo);
         const order = negocio?.orden_categorias || [];
-        agruped.sort((a, b) => {
-            const idxA = order.indexOf(a);
-            const idxB = order.indexOf(b);
-            if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-            if (idxA !== -1) return -1;
-            if (idxB !== -1) return 1;
-            return a.localeCompare(b);
+        
+        const ordered: string[] = [];
+        const unordered: string[] = [];
+        
+        order.forEach(cat => {
+            if (agruped.includes(cat)) {
+                ordered.push(cat);
+            }
         });
-        return agruped;
+        
+        agruped.forEach(key => {
+            if (!order.includes(key)) {
+                unordered.push(key);
+            }
+        });
+        
+        unordered.sort((a, b) => a.localeCompare(b));
+        
+        return [...ordered, ...unordered];
     }, [productosPorTipo, negocio?.orden_categorias]);
 
     useEffect(() => {

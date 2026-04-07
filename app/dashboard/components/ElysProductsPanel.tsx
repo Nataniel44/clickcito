@@ -665,13 +665,29 @@ export function ElysProductsPanel({ productos, loadingProductos, negocioData }: 
     const orderedKeys = useMemo(() => {
         const keys = Object.keys(grouped);
         const order: string[] = negocioData?.orden_categorias || [];
-        return keys.sort((a, b) => {
-            const ia = order.indexOf(a), ib = order.indexOf(b);
-            if (ia !== -1 && ib !== -1) return ia - ib;
-            if (ia !== -1) return -1;
-            if (ib !== -1) return 1;
-            return a.localeCompare(b);
+        
+        // Separar keys que están en el orden guardado y las que no
+        const ordered: string[] = [];
+        const unordered: string[] = [];
+        
+        // Primero, tomar las keys del orden guardado que existen en los productos
+        order.forEach(cat => {
+            if (keys.includes(cat)) {
+                ordered.push(cat);
+            }
         });
+        
+        // Luego, agregar las keys que no están en el orden guardado
+        keys.forEach(key => {
+            if (!order.includes(key)) {
+                unordered.push(key);
+            }
+        });
+        
+        // Ordenar las no ordenadas alfabéticamente
+        unordered.sort((a, b) => a.localeCompare(b));
+        
+        return [...ordered, ...unordered];
     }, [grouped, negocioData?.orden_categorias]);
 
     const mainCats = useMemo(() => {
@@ -850,7 +866,7 @@ export function ElysProductsPanel({ productos, loadingProductos, negocioData }: 
                                                             </span>
                                                         ))
                                                     ) : p.precio_base > 0 ? (
-                                                        <p className="text-[12px] font-black text-orange-600">${Number(p.precio_base).toLocaleString('es-AR')}</p>
+                                                        <p className="text-[12px] font-black text-orange-600">${(Number(p.precio_base) || 0).toLocaleString('es-AR')}</p>
                                                     ) : null}
                                                     {(() => {
                                                         // PRIORIDAD: Si hay extras estructurados, NO renderizamos los parseados de la descripción

@@ -33,9 +33,20 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
 
     const extras = useMemo(() => product?.detalles_especificos?.extras || [], [product]);
 
+    const displayPrice = useMemo(() => {
+        if (!product) return 0;
+        const base = Number(product.precio_base) || 0;
+        if (base > 0) return base;
+        const opciones = product.opciones || [];
+        if (opciones.length > 0) {
+            return Math.min(...opciones.map((o: any) => Number(o.precio) || 0));
+        }
+        return 0;
+    }, [product]);
+
     const totalPrice = useMemo(() => {
         if (!product) return 0;
-        let base = Number(product.precio_base) || 0;
+        let base = displayPrice;
         let extrasTotal = 0;
 
         Object.entries(selectedExtras).forEach(([groupIdx, selectedNames]) => {
@@ -132,7 +143,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
                             {product.nombre_producto}
                         </h2>
                         <span className="text-3xl font-black opacity-90 drop-shadow-lg">
-                            ${Number(product.precio_base).toLocaleString('es-AR')}
+                            ${(Number(product.precio_base) || 0).toLocaleString('es-AR')}
                         </span>
                     </div>
                 </div>
@@ -153,7 +164,7 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
                                 )}
                             </div>
                             <span className="text-2xl font-black text-gray-900 dark:text-white shrink-0">
-                                ${Number(product.precio_base).toLocaleString('es-AR')}
+                                ${(Number(product.precio_base) || 0).toLocaleString('es-AR')}
                             </span>
                         </div>
 

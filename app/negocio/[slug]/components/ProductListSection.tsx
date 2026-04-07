@@ -4,7 +4,7 @@ import { ShoppingBag, MessageCircle, ChevronDown } from "lucide-react";
 import { useEffect, useState, useRef, memo } from "react";
 import { ProductCard } from "./ProductCard";
 
-const INITIAL_LIMIT = 30;
+const INITIAL_LIMIT = 100;
 
 interface ProductListSectionProps {
     productos: any[];
@@ -79,7 +79,9 @@ export const ProductListSection = memo(function ProductListSection({
         visibleProductosPorTipo[tipo].push(p);
     });
 
-    const visibleCategorias = showAll ? categoriasOrdenadas : categoriasOrdenadas.filter(tipo => visibleProductosPorTipo[tipo]);
+    const visibleCategorias = showAll 
+        ? categoriasOrdenadas 
+        : categoriasOrdenadas.filter(tipo => productosPorTipo[tipo]?.length > 0);
 
     const handleShowMore = () => {
         setShowAll(true);
@@ -138,7 +140,7 @@ export const ProductListSection = memo(function ProductListSection({
                     )}
 
                     {visibleCategorias.map((tipo) => {
-                        const prods = visibleProductosPorTipo[tipo];
+                        const prods = visibleProductosPorTipo[tipo] || [];
                         return (
                             <div
                                 key={tipo}
