@@ -107,13 +107,13 @@ export function ProductDetailModal({ isOpen, isOpenBusiness, onClose, product, o
 
             {/* ── Image Area (Left Column on PC) ── */}
             <div className="relative w-full h-[40vh] sm:h-[50vh] lg:h-full lg:w-1/2 shrink-0 bg-gray-100 dark:bg-zinc-900/40">
-                {product.imagen_url ? (
+                {(product.imagen_url || product.imagen) ? (
                     <>
                         {loadingImage && (
                             <div className="absolute inset-0 bg-gray-200 dark:bg-zinc-800 animate-pulse z-20" />
                         )}
                         <Image
-                            src={resolveImageUrl(product.imagen_url)}
+                            src={resolveImageUrl(product.imagen_url || product.imagen)}
                             alt={product.nombre_producto}
                             fill
                             className={`object-cover lg:object-center transition-all duration-700 ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'}`}

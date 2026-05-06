@@ -9,19 +9,44 @@ export function StatsPanel({
     ordenes,
     statsPeriod,
     setStatsPeriod,
+    statsCustomDate,
+    setStatsCustomDate,
+    statsDateFrom,
+    setStatsDateFrom,
+    statsDateTo,
+    setStatsDateTo,
     loadingOrdenes
 }: {
     ordenes: any[];
     statsPeriod: string;
     setStatsPeriod: (s: string) => void;
+    statsCustomDate: string;
+    setStatsCustomDate: (s: string) => void;
+    statsDateFrom: string;
+    setStatsDateFrom: (s: string) => void;
+    statsDateTo: string;
+    setStatsDateTo: (s: string) => void;
     loadingOrdenes: boolean;
 }) {
     const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - (now.getDay() || 7) + 1);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
     const statsOrders = ordenes.filter(o => {
         if (!o.createdAt) return false;
         const orderDate = new Date(o.createdAt.seconds * 1000);
+        
         if (statsPeriod === "hoy") {
-            return orderDate.toDateString() === now.toDateString();
+            return orderDate >= startOfToday;
+        } else if (statsPeriod === "ayer") {
+            const yesterday = new Date(startOfToday);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const endOfYesterday = new Date(yesterday);
+            endOfYesterday.setDate(endOfYesterday.getDate() + 1);
+            return orderDate >= yesterday && orderDate < endOfYesterday;
         } else if (statsPeriod === "7d") {
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(now.getDate() - 7);
@@ -30,6 +55,23 @@ export function StatsPanel({
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(now.getDate() - 30);
             return orderDate >= thirtyDaysAgo;
+        } else if (statsPeriod === "semana") {
+            return orderDate >= startOfWeek;
+        } else if (statsPeriod === "mes") {
+            return orderDate >= startOfMonth;
+        } else if (statsPeriod === "año") {
+            return orderDate >= startOfYear;
+        } else if (statsPeriod === "fecha" && statsCustomDate) {
+            const [y, m, d] = statsCustomDate.split("-").map(Number);
+            const selected = new Date(y, m - 1, d);
+            const nextDay = new Date(y, m - 1, d + 1);
+            return orderDate >= selected && orderDate < nextDay;
+        } else if (statsPeriod === "rango" && statsDateFrom && statsDateTo) {
+            const [yF, mF, dF] = statsDateFrom.split("-").map(Number);
+            const [yT, mT, dT] = statsDateTo.split("-").map(Number);
+            const from = new Date(yF, mF - 1, dF);
+            const to = new Date(yT, mT - 1, dT + 1);
+            return orderDate >= from && orderDate < to;
         }
         return true;
     });
@@ -93,11 +135,18 @@ export function StatsPanel({
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center gap-2 p-1 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 w-fit">
+            <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 p-1 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 w-fit">
                 {[
                     { id: "hoy", label: "Hoy" },
+                    { id: "ayer", label: "Ayer" },
                     { id: "7d", label: "7 días" },
                     { id: "30d", label: "30 días" },
+                    { id: "semana", label: "Semana" },
+                    { id: "mes", label: "Mes" },
+                    { id: "año", label: "Año" },
+                    { id: "fecha", label: "Día específico" },
+                    { id: "rango", label: "Rango" },
                     { id: "todas", label: "Todo" },
                 ].map(p => (
                     <button
@@ -109,6 +158,38 @@ export function StatsPanel({
                     </button>
                 ))}
             </div>
+            
+            {statsPeriod === "fecha" && (
+                <div className="flex items-center gap-2">
+                    <input
+                        type="date"
+                        value={statsCustomDate}
+                        onChange={(e) => setStatsCustomDate(e.target.value)}
+                        className="px-4 py-2 rounded-xl text-sm border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
+                    />
+                </div>
+            )}
+            
+            {statsPeriod === "rango" && (
+                <div className="flex items-center gap-2">
+                    <input
+                        type="date"
+                        value={statsDateFrom}
+                        onChange={(e) => setStatsDateFrom(e.target.value)}
+                        className="px-4 py-2 rounded-xl text-sm border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
+                        placeholder="Desde"
+                    />
+                    <span className="text-gray-400">-</span>
+                    <input
+                        type="date"
+                        value={statsDateTo}
+                        onChange={(e) => setStatsDateTo(e.target.value)}
+                        className="px-4 py-2 rounded-xl text-sm border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-gray-900 dark:text-white"
+                        placeholder="Hasta"
+                    />
+                </div>
+            )}
+        </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 p-5 shadow-sm">

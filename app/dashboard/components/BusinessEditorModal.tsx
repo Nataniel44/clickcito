@@ -348,7 +348,8 @@ export function BusinessEditorModal({
                                         </button>
                                     </div>
 
-                                    {/* Nuevas logísticas de Educación */}
+                                    {/* Nuevas logísticas de Educación - Solo para rubro educación */}
+                                    {formData?.rubro?.toLowerCase().includes("educacion") && (
                                     <div className="pt-6 border-t border-gray-50 dark:border-zinc-800">
                                         <h4 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4 flex items-center gap-2 px-1">
                                             <Star size={12} fill="currentColor" /> Formatos Educativos
@@ -383,6 +384,7 @@ export function BusinessEditorModal({
                                             </button>
                                         </div>
                                     </div>
+                                    )}
 
                                     {formData.configuracion_logistica.delivery_habilitado && (
                                         <div className="space-y-4 p-6 bg-white dark:bg-zinc-900 rounded-3xl border border-gray-100 dark:border-zinc-800 animate-in fade-in zoom-in duration-300">

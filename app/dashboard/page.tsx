@@ -48,6 +48,9 @@ export default function DashboardPage() {
     const [bannerText, setBannerText] = useState("");
     const [isUpdatingBanner, setIsUpdatingBanner] = useState(false);
     const [statsPeriod, setStatsPeriod] = useState("7d");
+    const [statsCustomDate, setStatsCustomDate] = useState("");
+    const [statsDateFrom, setStatsDateFrom] = useState("");
+    const [statsDateTo, setStatsDateTo] = useState("");
     const [isConfigEditing, setIsConfigEditing] = useState(false);
     const [configEditData, setConfigEditData] = useState({ nombre: "", nombre_negocio: "" });
     const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -628,6 +631,8 @@ export default function DashboardPage() {
                 renderOrderRow={renderOrderRow}
                 setActiveTab={setActiveTab}
                 handleCierreCaja={handleCierreCaja}
+                negocioData={negocioData}
+                onRefresh={refreshAdminData}
             />
         ),
         ordenes: () => (
@@ -693,6 +698,12 @@ export default function DashboardPage() {
                 ordenes={ordenes}
                 statsPeriod={statsPeriod}
                 setStatsPeriod={setStatsPeriod}
+                statsCustomDate={statsCustomDate}
+                setStatsCustomDate={setStatsCustomDate}
+                statsDateFrom={statsDateFrom}
+                setStatsDateFrom={setStatsDateFrom}
+                statsDateTo={statsDateTo}
+                setStatsDateTo={setStatsDateTo}
                 loadingOrdenes={loadingOrdenes}
             />
         ),

@@ -101,13 +101,13 @@ export const ProductCard = memo(function ProductCard({ prod, onAdd, onOpenDetail
 
             {/* Imagen con Aspect Ratio controlado */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gray-50 dark:bg-zinc-800 flex items-center justify-center text-2xl shrink-0 relative overflow-hidden border border-gray-100 dark:border-zinc-800/60 shadow-sm">
-                {prod.imagen_url && !imageError ? (
+                {(prod.imagen_url || prod.imagen) && !imageError ? (
                     <>
                         {loadingImage && (
                             <div className="absolute inset-0 bg-gray-200 dark:bg-zinc-800 animate-pulse z-10" />
                         )}
                         <img
-                            src={resolveImageUrl(prod.imagen_url)}
+                            src={resolveImageUrl(prod.imagen_url || prod.imagen)}
                             alt={prod.nombre_producto || "Producto"}
                             className={`absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-all duration-700 ${!isAvailable ? 'grayscale opacity-50' : ''} ${loadingImage ? 'opacity-0 scale-105 blur-sm' : 'opacity-100 scale-100 blur-0'}`}
                             loading="lazy"

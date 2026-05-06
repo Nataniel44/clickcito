@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
-import { DollarSign, ShoppingBag, Clock, Target, History, QrCode, Plus, ChevronRight, Printer, TrendingUp, Users, Star } from "lucide-react";
+import React, { useState } from "react";
+import { DollarSign, ShoppingBag, Clock, Target, History, QrCode, Plus, ChevronRight, Printer, TrendingUp, Users, Star, Store } from "lucide-react";
 import { EmptyState } from "./EmptyState";
+import { BusinessEditorModal } from "./BusinessEditorModal";
 
 export function DashboardOverview({
     user,
@@ -11,7 +12,9 @@ export function DashboardOverview({
     ordenes,
     renderOrderRow,
     setActiveTab,
-    handleCierreCaja
+    handleCierreCaja,
+    negocioData,
+    onRefresh
 }: {
     user: any;
     metrics: any;
@@ -20,7 +23,10 @@ export function DashboardOverview({
     renderOrderRow: (o: any) => React.ReactNode;
     setActiveTab: (tab: string) => void;
     handleCierreCaja: () => void;
+    negocioData?: any;
+    onRefresh?: () => void;
 }) {
+    const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
     if (loadingOrdenes) {
         return (
             <div className="space-y-6 animate-pulse">
@@ -135,6 +141,16 @@ export function DashboardOverview({
                             <Printer size={20} />
                         </div>
                         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Cierre de Caja</span>
+                    </button>
+
+                    <button
+                        onClick={() => setIsBusinessModalOpen(true)}
+                        className="flex flex-col items-center gap-3 p-5 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-100 dark:border-zinc-800 hover:border-orange-200 dark:hover:border-orange-500/30 hover:shadow-md transition-all group"
+                    >
+                        <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-xl text-orange-600 group-hover:scale-110 transition-transform">
+                            <Store size={20} />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Mi Negocio</span>
                     </button>
                 </div>
             </div>
@@ -254,6 +270,15 @@ export function DashboardOverview({
                     <p className="text-[10px] font-black text-gray-300 dark:text-zinc-800 uppercase tracking-[0.4em]">Clickcito Dashboard OS v2.0</p>
                 </footer>
             </div>
+
+            {isBusinessModalOpen && negocioData && user?.id_negocio && (
+                <BusinessEditorModal
+                    isOpen={isBusinessModalOpen}
+                    onClose={() => setIsBusinessModalOpen(false)}
+                    negocio={{ id: user.id_negocio, ...negocioData }}
+                    onSuccess={onRefresh}
+                />
+            )}
         </div>
     );
 }
